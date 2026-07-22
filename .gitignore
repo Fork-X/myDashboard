@@ -100,9 +100,6 @@ vendor/bundle/
 # PHP / Composer
 vendor/
 
-# OneDay 中间产物目录（文件处理时的临时文件，不需要持久化）
-tmp/
-
 # other
 .stats
 .config
