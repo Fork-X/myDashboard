@@ -51,6 +51,9 @@ export default function WorkflowAssistant({ isOpen, onClose }: WorkflowAssistant
           <p className="text-sm text-vintage-brown">
             <strong>功能说明：</strong>这是一个用于保证金造数执行的问答助手，可以帮助您解答相关问题。
           </p>
+          <p className="text-xs text-vintage-brown mt-2 opacity-75">
+            💡 支持在 OneDay 平台内使用(自动代理)，也可以独立部署后直接调用 Idealab API
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="mb-6">
@@ -91,7 +94,7 @@ export default function WorkflowAssistant({ isOpen, onClose }: WorkflowAssistant
                 <h4 className="font-bold text-vintage-red mb-1">查询失败</h4>
                 <p className="text-sm text-vintage-dark">{error}</p>
                 <p className="text-xs text-vintage-brown mt-2">
-                  提示：请确保您在 OneDay 平台内访问此应用，并且 Workflow 已正确配置。
+                  提示：如果在 OneDay 平台外访问，请确保网络可访问 idealab.alibaba-inc.com 并已登录。
                 </p>
               </div>
             </div>

@@ -36,19 +36,32 @@ async function runIdeasStream(
   question: string,
   variableMap: Record<string, string> = {}
 ): Promise<Response> {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const url = `${baseUrl}/api/idealabworkflow/ideaPage/runIdeas/${experimentCode}/${version}`;
+  const isOneDayEnv = typeof window !== 'undefined' && window.location.hostname.includes('alibaba-inc.com');
+
+  let url: string;
+  let headers: Record<string, string>;
+
+  if (isOneDayEnv) {
+    const baseUrl = window.location.origin;
+    url = `${baseUrl}/api/idealabworkflow/ideaPage/runIdeas/${experimentCode}/${version}`;
+    headers = {
+      'Content-Type': 'application/json',
+      'source': 'oneday',
+    };
+  } else {
+    url = `https://idealab.alibaba-inc.com/api/ideaPage/runIdeas/${experimentCode}/${version}`;
+    headers = {
+      'Content-Type': 'application/json',
+    };
+  }
 
   console.log('调用 Workflow API:', url);
   console.log('请求参数:', { question, variableMap });
 
   const response = await fetch(url, {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'source': 'oneday',
-    },
+    credentials: isOneDayEnv ? 'include' : 'omit',
+    headers,
     body: JSON.stringify({
       question,
       stream: true,
