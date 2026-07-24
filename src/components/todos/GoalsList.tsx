@@ -16,6 +16,69 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   cancelled: { label: '已取消', color: 'bg-gray-400 text-white' },
 };
 
+const mockGoals: Goal[] = [
+  {
+    id: 'mock-1',
+    title: '完成个人看板系统开发',
+    description: '构建一个功能完善的个人管理系统，包含投资理财、个人思考、职业生涯、待办规划等模块，采用国风复古设计风格。',
+    type: 'year',
+    status: 'in_progress',
+    target_date: '2024-12-31',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: 'mock-2',
+    title: '投资收益率达到15%',
+    description: '通过价值投资策略，在控制风险的前提下，实现年化收益率15%的目标。重点关注科技、医药、消费等优质赛道。',
+    type: 'year',
+    status: 'in_progress',
+    target_date: '2024-12-31',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: 'mock-3',
+    title: '阅读50本书',
+    description: '涵盖投资、哲学、社会学、传播学等多个领域，拓宽知识面，提升思维深度。每本书都要写读书笔记和思考总结。',
+    type: 'year',
+    status: 'in_progress',
+    target_date: '2024-12-31',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: 'mock-4',
+    title: '学习 AI 大模型技术',
+    description: '深入学习 GPT、Claude 等大模型的原理和应用，掌握 Prompt Engineering 技巧，探索 AI 在实际工作中的应用场景。',
+    type: 'month',
+    status: 'in_progress',
+    target_date: '2024-03-31',
+    created_at: '2024-03-01T00:00:00Z',
+    updated_at: '2024-03-01T00:00:00Z'
+  },
+  {
+    id: 'mock-5',
+    title: '完成投资复盘系统',
+    description: '建立完善的投资复盘机制，每日记录市场观察和操作思路，每月进行投资总结和反思。',
+    type: 'month',
+    status: 'completed',
+    target_date: '2024-02-29',
+    created_at: '2024-02-01T00:00:00Z',
+    updated_at: '2024-02-01T00:00:00Z'
+  },
+  {
+    id: 'mock-6',
+    title: '优化个人时间管理',
+    description: '建立高效的时间管理系统，提高工作效率。使用番茄工作法，每天专注工作6小时，留出时间学习和思考。',
+    type: 'month',
+    status: 'in_progress',
+    target_date: '2024-03-31',
+    created_at: '2024-03-01T00:00:00Z',
+    updated_at: '2024-03-01T00:00:00Z'
+  }
+];
+
 export default function GoalsList() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +95,11 @@ export default function GoalsList() {
         .order('target_date', { ascending: false });
 
       if (error) throw error;
-      setGoals(data || []);
+      const dbData = data || [];
+      setGoals(dbData.length > 0 ? dbData : mockGoals);
     } catch (error) {
       console.error('Error fetching goals:', error);
+      setGoals(mockGoals);
     } finally {
       setLoading(false);
     }

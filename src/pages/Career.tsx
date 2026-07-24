@@ -11,6 +11,48 @@ type Career = Tables<'career_timeline'>;
 
 const PASSWORD = 'career2024';
 
+const mockCareers: Career[] = [
+  {
+    id: 'mock-1',
+    company: '阿里巴巴集团',
+    position: '高级前端工程师',
+    start_date: '2022-07-01',
+    end_date: null,
+    is_current: true,
+    responsibilities: '负责淘天集团用户&内容技术团队的前端开发工作，主要涉及个人看板系统、数据可视化平台等项目的架构设计和开发实现。\n\n参与团队技术选型和最佳实践制定，推动前端工程化建设。',
+    projects: ['个人看板系统', '数据可视化平台', 'OneDay Agent'],
+    salary: '40K * 16',
+    created_at: '2022-07-01T00:00:00Z',
+    updated_at: '2022-07-01T00:00:00Z'
+  },
+  {
+    id: 'mock-2',
+    company: '字节跳动',
+    position: '前端工程师',
+    start_date: '2020-03-01',
+    end_date: '2022-06-30',
+    is_current: false,
+    responsibilities: '负责抖音创作者平台的前端开发，包括视频编辑器、数据分析看板等核心功能模块。\n\n优化页面性能，提升用户体验，参与多个重点项目的技术攻坚。',
+    projects: ['视频编辑器', '创作者数据看板', '直播管理后台'],
+    salary: '30K * 15',
+    created_at: '2020-03-01T00:00:00Z',
+    updated_at: '2020-03-01T00:00:00Z'
+  },
+  {
+    id: 'mock-3',
+    company: '腾讯科技',
+    position: '初级前端工程师',
+    start_date: '2018-07-01',
+    end_date: '2020-02-28',
+    is_current: false,
+    responsibilities: '负责微信公众平台的前端开发和维护工作，参与多个功能模块的迭代开发。\n\n学习并实践React、Vue等主流前端框架，积累了丰富的项目经验。',
+    projects: ['公众号管理后台', '素材管理系统', '数据统计平台'],
+    salary: '18K * 14',
+    created_at: '2018-07-01T00:00:00Z',
+    updated_at: '2018-07-01T00:00:00Z'
+  }
+];
+
 export default function Career() {
   const [careers, setCareers] = useState<Career[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +74,11 @@ export default function Career() {
         .order('start_date', { ascending: false });
 
       if (error) throw error;
-      setCareers(data || []);
+      const dbData = data || [];
+      setCareers(dbData.length > 0 ? dbData : mockCareers);
     } catch (error) {
       console.error('Error fetching careers:', error);
+      setCareers(mockCareers);
     } finally {
       setLoading(false);
     }
