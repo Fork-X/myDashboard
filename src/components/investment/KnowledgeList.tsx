@@ -4,15 +4,13 @@ import { Tables } from '../../onedaycloud/types';
 import Card from '../common/Card';
 import Loading from '../common/Loading';
 import EmptyState from '../common/EmptyState';
-import KnowledgeAssistant from './KnowledgeAssistant';
-import { BookOpen, Tag, MessageCircle } from 'lucide-react';
+import { BookOpen, Tag } from 'lucide-react';
 
 type Knowledge = Tables<'investment_knowledge'>;
 
 export default function KnowledgeList() {
   const [knowledge, setKnowledge] = useState<Knowledge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAssistant, setShowAssistant] = useState(false);
 
   useEffect(() => {
     fetchKnowledge();
@@ -38,38 +36,16 @@ export default function KnowledgeList() {
 
   if (knowledge.length === 0) {
     return (
-      <>
-        <div className="mb-6 flex justify-end">
-          <button
-            onClick={() => setShowAssistant(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
-          >
-            <MessageCircle size={18} />
-            <span>AI 知识助手</span>
-          </button>
-        </div>
-        <EmptyState
-          icon={<BookOpen size={64} />}
-          title="暂无投资知识"
-          description="开始添加您的投资知识和经验，或使用 AI 助手查询"
-        />
-        <KnowledgeAssistant isOpen={showAssistant} onClose={() => setShowAssistant(false)} />
-      </>
+      <EmptyState
+        icon={<BookOpen size={64} />}
+        title="暂无投资知识"
+        description="开始添加您的投资知识和经验"
+      />
     );
   }
 
   return (
-    <>
-      <div className="mb-6 flex justify-end">
-        <button
-          onClick={() => setShowAssistant(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
-        >
-          <MessageCircle size={18} />
-          <span>AI 知识助手</span>
-        </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {knowledge.map((item, index) => (
         <Card key={item.id} number={String(index + 1).padStart(4, '0')}>
           <h3 className="text-lg font-bold text-vintage-dark mb-2">{item.title}</h3>
@@ -92,8 +68,6 @@ export default function KnowledgeList() {
           )}
         </Card>
       ))}
-      </div>
-      <KnowledgeAssistant isOpen={showAssistant} onClose={() => setShowAssistant(false)} />
-    </>
+    </div>
   );
 }
