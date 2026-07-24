@@ -4,15 +4,13 @@ import { Tables } from '../onedaycloud/types';
 import Card from '../components/common/Card';
 import Loading from '../components/common/Loading';
 import EmptyState from '../components/common/EmptyState';
-import WorkflowAssistant from '../components/projects/WorkflowAssistant';
-import { Folder, Github, ExternalLink, Code, MessageCircle } from 'lucide-react';
+import { Folder, Github, ExternalLink, Code } from 'lucide-react';
 
 type Project = Tables<'projects'>;
 
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAssistant, setShowAssistant] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -113,23 +111,6 @@ export default function Projects() {
             ))}
           </div>
         )}
-
-        <div className="mt-8 pt-8 border-t-2 border-dashed border-vintage-border">
-          <div className="vintage-card p-6 text-center">
-            <div className="vintage-stamp mb-4">工作助手</div>
-            <h3 className="text-xl font-bold text-vintage-dark mb-3">保证金造数助手</h3>
-            <p className="text-vintage-brown mb-4">用于保证金造数执行的问答助手，帮您解答相关问题</p>
-            <button
-              onClick={() => setShowAssistant(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
-            >
-              <MessageCircle size={20} />
-              <span>打开助手</span>
-            </button>
-          </div>
-        </div>
-
-        <WorkflowAssistant isOpen={showAssistant} onClose={() => setShowAssistant(false)} />
       </div>
     </div>
   );
