@@ -76,56 +76,61 @@ export default function Career() {
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
         <div className="relative">
-          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
+          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-vintage-border" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #D4C4B0, #D4C4B0 10px, transparent 10px, transparent 20px)' }} />
 
           <div className="space-y-8">
             {careers.map((career, index) => (
               <div key={career.id} className="relative pl-20">
                 <div
-                  className={`absolute left-5 w-6 h-6 rounded-full border-4 border-white ${
-                    career.is_current ? 'bg-blue-600' : 'bg-gray-400'
+                  className={`absolute left-5 w-6 h-6 rounded-full border-4 ${
+                    career.is_current ? 'bg-vintage-red border-vintage-paper' : 'bg-vintage-brown border-vintage-paper'
                   }`}
                 />
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="vintage-card p-6">
+                  <div className="vintage-number text-xs mb-3">
+                    NO.{format(new Date(career.start_date), 'yyyyMM')}
+                  </div>
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">{career.position}</h3>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <h3 className="text-xl font-bold text-vintage-dark mb-2">{career.position}</h3>
+                      <div className="flex items-center gap-2 text-vintage-brown">
                         <MapPin size={16} />
-                        <span>{career.company}</span>
+                        <span className="font-medium">{career.company}</span>
                       </div>
                     </div>
                     {career.is_current && (
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
+                      <div className="vintage-stamp">
                         当前
-                      </span>
+                      </div>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                  <div className="vintage-divider"></div>
+
+                  <div className="flex items-center gap-2 text-sm vintage-number mb-4 mt-3">
                     <Calendar size={16} />
                     <span>
-                      {format(new Date(career.start_date), 'yyyy年MM月')} -{' '}
-                      {career.end_date ? format(new Date(career.end_date), 'yyyy年MM月') : '至今'}
+                      {format(new Date(career.start_date), 'yyyy.MM')} -{' '}
+                      {career.end_date ? format(new Date(career.end_date), 'yyyy.MM') : '至今'}
                     </span>
                   </div>
 
                   {career.responsibilities && (
                     <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">工作内容</h4>
-                      <p className="text-gray-600 text-sm whitespace-pre-wrap">{career.responsibilities}</p>
+                      <h4 className="text-sm font-bold text-vintage-dark mb-2">工作内容</h4>
+                      <p className="text-vintage-brown text-sm whitespace-pre-wrap">{career.responsibilities}</p>
                     </div>
                   )}
 
                   {career.projects && career.projects.length > 0 && (
                     <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">负责项目</h4>
+                      <h4 className="text-sm font-bold text-vintage-dark mb-2">负责项目</h4>
                       <div className="flex flex-wrap gap-2">
                         {career.projects.map((project, idx) => (
                           <span
                             key={idx}
-                            className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
+                            className="px-3 py-1 bg-white text-vintage-dark text-sm rounded border-2 border-dashed border-vintage-border"
                           >
                             {project}
                           </span>
@@ -135,15 +140,15 @@ export default function Career() {
                   )}
 
                   {career.salary && (
-                    <div className="pt-4 border-t border-gray-200">
+                    <div className="pt-4 border-t-2 border-dashed border-vintage-border">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <DollarSign size={16} className="text-gray-500" />
-                          <span className="text-sm font-semibold text-gray-700">薪资</span>
+                          <DollarSign size={16} className="text-vintage-brown" />
+                          <span className="text-sm font-bold text-vintage-dark">薪资</span>
                         </div>
                         <button
                           onClick={() => toggleSalary(career.id)}
-                          className="flex items-center gap-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="flex items-center gap-2 px-3 py-1 text-sm text-vintage-red hover:bg-white rounded transition-colors border-2 border-dashed border-vintage-border"
                         >
                           {showSalary[career.id] ? (
                             <>
@@ -159,7 +164,7 @@ export default function Career() {
                         </button>
                       </div>
                       {showSalary[career.id] && (
-                        <div className="mt-2 text-gray-900 font-medium">{career.salary}</div>
+                        <div className="mt-2 text-vintage-dark font-bold vintage-number">{career.salary}</div>
                       )}
                     </div>
                   )}
@@ -179,9 +184,9 @@ export default function Career() {
           title="验证密码"
           size="sm"
         >
-          <form onSubmit={handlePasswordSubmit} className="p-6">
+          <form onSubmit={handlePasswordSubmit} className="p-6 bg-vintage-paper">
             <div className="mb-4">
-              <div className="flex items-center gap-2 mb-4 text-gray-600">
+              <div className="flex items-center gap-2 mb-4 text-vintage-brown">
                 <Lock size={20} />
                 <p className="text-sm">请输入密码以查看敏感信息</p>
               </div>
@@ -190,16 +195,16 @@ export default function Career() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入密码"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border-2 border-dashed border-vintage-border rounded bg-white focus:outline-none focus:border-vintage-red"
                 autoFocus
               />
               {passwordError && (
-                <p className="mt-2 text-sm text-red-600">{passwordError}</p>
+                <p className="mt-2 text-sm text-vintage-red">{passwordError}</p>
               )}
             </div>
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="w-full px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
             >
               确认
             </button>

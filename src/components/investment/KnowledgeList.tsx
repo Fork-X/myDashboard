@@ -46,20 +46,21 @@ export default function KnowledgeList() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {knowledge.map((item) => (
-        <Card key={item.id}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
-          <p className="text-gray-600 text-sm mb-4 line-clamp-3">{item.content}</p>
+      {knowledge.map((item, index) => (
+        <Card key={item.id} number={String(index + 1).padStart(4, '0')}>
+          <h3 className="text-lg font-bold text-vintage-dark mb-2">{item.title}</h3>
+          <div className="vintage-divider"></div>
+          <p className="text-vintage-brown text-sm mb-4 line-clamp-3">{item.content}</p>
           {item.category && (
-            <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full mb-3">
+            <div className="vintage-stamp mb-3">
               {item.category}
-            </span>
+            </div>
           )}
           {item.tags && item.tags.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <Tag size={14} className="text-gray-400" />
-              {item.tags.map((tag, index) => (
-                <span key={index} className="text-xs text-gray-500">
+            <div className="flex items-center gap-2 flex-wrap pt-3 border-t border-dashed border-vintage-border">
+              <Tag size={14} className="text-vintage-brown" />
+              {item.tags.map((tag, idx) => (
+                <span key={idx} className="text-xs text-vintage-brown border border-vintage-border px-2 py-1 rounded">
                   {tag}
                 </span>
               ))}

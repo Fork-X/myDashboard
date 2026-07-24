@@ -52,35 +52,36 @@ export default function Projects() {
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <Card key={project.id} className="flex flex-col">
+          {projects.map((project, index) => (
+            <Card key={project.id} number={String(index + 1).padStart(4, '0')} className="flex flex-col">
               {project.image_url && (
                 <div className="mb-4 -mx-6 -mt-6">
                   <img
                     src={project.image_url}
                     alt={project.name}
-                    className="w-full h-48 object-cover rounded-t-lg"
+                    className="w-full h-48 object-cover rounded-t-lg border-b-2 border-dashed border-vintage-border"
                   />
                 </div>
               )}
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{project.name}</h3>
+              <h3 className="text-xl font-bold text-vintage-dark mb-2">{project.name}</h3>
+              <div className="vintage-divider"></div>
 
               {project.description && (
-                <p className="text-gray-600 text-sm mb-4 flex-1">{project.description}</p>
+                <p className="text-vintage-brown text-sm mb-4 flex-1 mt-3">{project.description}</p>
               )}
 
               {project.tech_stack && project.tech_stack.length > 0 && (
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Code size={16} className="text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">技术栈</span>
+                    <Code size={16} className="text-vintage-brown" />
+                    <span className="text-sm font-bold text-vintage-dark">技术栈</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {project.tech_stack.map((tech, index) => (
+                    {project.tech_stack.map((tech, idx) => (
                       <span
-                        key={index}
-                        className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded"
+                        key={idx}
+                        className="px-2 py-1 bg-white text-vintage-dark text-xs rounded border-2 border-dashed border-vintage-border"
                       >
                         {tech}
                       </span>
@@ -89,13 +90,13 @@ export default function Projects() {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <div className="flex gap-3 pt-4 border-t-2 border-dashed border-vintage-border">
                 {project.github_url && (
                   <a
                     href={project.github_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm flex-1 justify-center"
+                    className="flex items-center gap-2 px-4 py-2 bg-vintage-dark text-white rounded hover:bg-vintage-brown transition-colors text-sm flex-1 justify-center font-bold"
                   >
                     <Github size={16} />
                     <span>GitHub</span>
@@ -106,7 +107,7 @@ export default function Projects() {
                     href={project.demo_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex-1 justify-center"
+                    className="flex items-center gap-2 px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors text-sm flex-1 justify-center font-bold"
                   >
                     <ExternalLink size={16} />
                     <span>演示</span>

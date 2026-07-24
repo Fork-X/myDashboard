@@ -75,32 +75,21 @@ export default function TodoList() {
     }
   };
 
-  const deleteTodo = async (id: string) => {
-    try {
-      const { error } = await supabase.from('todos').delete().eq('id', id);
-      if (error) throw error;
-      fetchTodos();
-    } catch (error) {
-      console.error('Error deleting todo:', error);
-    }
-  };
-
   if (loading) return <Loading />;
 
   const pendingTodos = todos.filter((t) => t.status === 'pending');
   const completedTodos = todos.filter((t) => t.status === 'completed');
-  const cancelledTodos = todos.filter((t) => t.status === 'cancelled');
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-sm text-gray-600">
+        <div className="flex items-center gap-4 text-sm vintage-number">
           <span>待完成: {pendingTodos.length}</span>
           <span>已完成: {completedTodos.length}</span>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
         >
           <Plus size={18} />
           <span>添加待办</span>
@@ -108,13 +97,13 @@ export default function TodoList() {
       </div>
 
       {showAddForm && (
-        <form onSubmit={addTodo} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <form onSubmit={addTodo} className="vintage-card p-4">
           <input
             type="text"
             value={newTodoTitle}
             onChange={(e) => setNewTodoTitle(e.target.value)}
             placeholder="待办标题"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border-2 border-dashed border-vintage-border rounded mb-3 bg-white focus:outline-none focus:border-vintage-red"
             autoFocus
           />
           <textarea
@@ -122,12 +111,12 @@ export default function TodoList() {
             onChange={(e) => setNewTodoDescription(e.target.value)}
             placeholder="描述（可选）"
             rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border-2 border-dashed border-vintage-border rounded mb-3 bg-white focus:outline-none focus:border-vintage-red"
           />
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
             >
               添加
             </button>
@@ -138,7 +127,7 @@ export default function TodoList() {
                 setNewTodoTitle('');
                 setNewTodoDescription('');
               }}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 bg-white text-vintage-dark rounded hover:bg-gray-100 transition-colors border-2 border-dashed border-vintage-border"
             >
               取消
             </button>
@@ -156,31 +145,37 @@ export default function TodoList() {
         <div className="space-y-6">
           {pendingTodos.length > 0 && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">待完成</h3>
+              <h3 className="text-lg font-bold text-vintage-dark mb-3 flex items-center gap-2">
+                <span>待完成</span>
+                <div className="vintage-divider flex-1"></div>
+              </h3>
               <div className="space-y-2">
-                {pendingTodos.map((todo) => (
+                {pendingTodos.map((todo, index) => (
                   <div
                     key={todo.id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-start gap-3"
+                    className="vintage-card p-4 flex items-start gap-3"
                   >
+                    <span className="vintage-number text-xs mt-1">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
                     <button
                       onClick={() => updateTodoStatus(todo.id, 'completed')}
-                      className="flex-shrink-0 mt-1 text-gray-400 hover:text-green-600 transition-colors"
+                      className="flex-shrink-0 mt-1 text-vintage-brown hover:text-vintage-red transition-colors"
                     >
                       <Square size={20} />
                     </button>
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{todo.title}</h4>
+                      <h4 className="font-bold text-vintage-dark">{todo.title}</h4>
                       {todo.description && (
-                        <p className="text-sm text-gray-600 mt-1">{todo.description}</p>
+                        <p className="text-sm text-vintage-brown mt-1">{todo.description}</p>
                       )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        {format(new Date(todo.created_at!), 'yyyy-MM-dd HH:mm')}
+                      <p className="text-xs vintage-number mt-2">
+                        {format(new Date(todo.created_at!), 'yyyy.MM.dd HH:mm')}
                       </p>
                     </div>
                     <button
                       onClick={() => updateTodoStatus(todo.id, 'cancelled')}
-                      className="flex-shrink-0 text-gray-400 hover:text-red-600 transition-colors"
+                      className="flex-shrink-0 text-vintage-brown hover:text-vintage-red transition-colors"
                     >
                       <X size={20} />
                     </button>
@@ -192,26 +187,32 @@ export default function TodoList() {
 
           {completedTodos.length > 0 && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">已完成</h3>
+              <h3 className="text-lg font-bold text-vintage-dark mb-3 flex items-center gap-2">
+                <span>已完成</span>
+                <div className="vintage-divider flex-1"></div>
+              </h3>
               <div className="space-y-2">
-                {completedTodos.map((todo) => (
+                {completedTodos.map((todo, index) => (
                   <div
                     key={todo.id}
-                    className="bg-gray-50 rounded-lg border border-gray-200 p-4 flex items-start gap-3 opacity-75"
+                    className="vintage-card p-4 flex items-start gap-3 opacity-60"
                   >
+                    <span className="vintage-number text-xs mt-1">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
                     <button
                       onClick={() => updateTodoStatus(todo.id, 'pending')}
-                      className="flex-shrink-0 mt-1 text-green-600 hover:text-gray-400 transition-colors"
+                      className="flex-shrink-0 mt-1 text-vintage-red hover:text-vintage-brown transition-colors"
                     >
                       <CheckSquare size={20} />
                     </button>
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-700 line-through">{todo.title}</h4>
+                      <h4 className="font-bold text-vintage-dark line-through">{todo.title}</h4>
                       {todo.description && (
-                        <p className="text-sm text-gray-600 mt-1 line-through">{todo.description}</p>
+                        <p className="text-sm text-vintage-brown mt-1 line-through">{todo.description}</p>
                       )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        完成于 {format(new Date(todo.completed_at!), 'yyyy-MM-dd HH:mm')}
+                      <p className="text-xs vintage-number mt-2">
+                        完成于 {format(new Date(todo.completed_at!), 'yyyy.MM.dd HH:mm')}
                       </p>
                     </div>
                   </div>

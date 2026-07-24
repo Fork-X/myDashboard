@@ -8,43 +8,96 @@
   box-sizing: border-box;
 }
 
-:root {
-  --bg-color: #ffffff;
-  --text-color: #000000;
-  --text-secondary: #8a8a8a;
-}
-
-:root.dark,
-[data-theme='dark'] {
-  --bg-color: #1a1a1a;
-  --text-color: #ffffff;
-  --text-secondary: #9ca3af;
-}
-
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Noto Serif SC', Georgia, 'Times New Roman', serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-color);
-  color: var(--text-color);
+  background-color: #F5EFE6;
+}
+
+.vintage-card {
+  background: linear-gradient(135deg, #FAF6F0 0%, #F5EFE6 100%);
+  border: 2px dashed #D4C4B0;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 0 60px rgba(212, 196, 176, 0.1);
+  position: relative;
+}
+
+.vintage-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(212, 196, 176, 0.03) 2px,
+      rgba(212, 196, 176, 0.03) 4px
+    );
+  pointer-events: none;
+}
+
+.vintage-stamp {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #C84B31;
+  color: white;
+  font-weight: bold;
+  transform: rotate(-5deg);
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid #A03A23;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
+
+.vintage-number {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: #8B7355;
+  letter-spacing: 2px;
+}
+
+.vintage-barcode {
+  background: repeating-linear-gradient(
+    90deg,
+    #3E3E3E 0px,
+    #3E3E3E 2px,
+    transparent 2px,
+    transparent 4px,
+    #3E3E3E 4px,
+    #3E3E3E 5px,
+    transparent 5px,
+    transparent 8px
+  );
+  height: 40px;
+  opacity: 0.6;
+}
+
+.vintage-divider {
+  border-top: 1px dashed #D4C4B0;
+  margin: 16px 0;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
   height: 8px;
+  width: 8px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #F5EFE6;
   border-radius: 4px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #D4C4B0;
   border-radius: 4px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #C4B4A0;
 }

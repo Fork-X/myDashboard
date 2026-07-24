@@ -4,16 +4,22 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
+  number?: string;
 }
 
-export default function Card({ children, className = '', onClick }: CardProps) {
+export default function Card({ children, className = '', onClick, number }: CardProps) {
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 ${
-        onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+      className={`vintage-card rounded-lg p-6 ${
+        onClick ? 'cursor-pointer hover:shadow-lg transition-all' : ''
       } ${className}`}
       onClick={onClick}
     >
+      {number && (
+        <div className="vintage-number text-xs mb-2 opacity-60">
+          NO.{number}
+        </div>
+      )}
       {children}
     </div>
   );

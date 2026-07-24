@@ -59,10 +59,10 @@ export default function Thoughts() {
             <button
               key={cat.value}
               onClick={() => setSelectedCategory(cat.value)}
-              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded font-medium whitespace-nowrap transition-all border-2 ${
                 selectedCategory === cat.value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  ? 'bg-vintage-red text-white border-vintage-red shadow-md'
+                  : 'bg-vintage-paper text-vintage-dark border-dashed border-vintage-border hover:bg-white hover:shadow-sm'
               }`}
             >
               {cat.label}
@@ -78,23 +78,24 @@ export default function Thoughts() {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {thoughts.map((thought) => (
-              <Card key={thought.id} onClick={() => setSelectedThought(thought)}>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{thought.title}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-4">{thought.content}</p>
-                <div className="flex items-center justify-between">
-                  <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+            {thoughts.map((thought, index) => (
+              <Card key={thought.id} number={String(index + 1).padStart(4, '0')} onClick={() => setSelectedThought(thought)}>
+                <h3 className="text-lg font-bold text-vintage-dark mb-2">{thought.title}</h3>
+                <div className="vintage-divider"></div>
+                <p className="text-vintage-brown text-sm mb-4 line-clamp-4 mt-3">{thought.content}</p>
+                <div className="flex items-center justify-between border-t border-dashed border-vintage-border pt-3">
+                  <div className="vintage-stamp text-xs">
                     {categories.find((c) => c.value === thought.category)?.label}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {format(new Date(thought.created_at!), 'yyyy-MM-dd')}
+                  </div>
+                  <span className="text-xs vintage-number">
+                    {format(new Date(thought.created_at!), 'yyyy.MM.dd')}
                   </span>
                 </div>
                 {thought.tags && thought.tags.length > 0 && (
                   <div className="flex items-center gap-2 flex-wrap mt-3">
-                    <Tag size={14} className="text-gray-400" />
-                    {thought.tags.map((tag, index) => (
-                      <span key={index} className="text-xs text-gray-500">
+                    <Tag size={14} className="text-vintage-brown" />
+                    {thought.tags.map((tag, idx) => (
+                      <span key={idx} className="text-xs text-vintage-brown border border-vintage-border px-2 py-1 rounded">
                         {tag}
                       </span>
                     ))}
@@ -112,24 +113,25 @@ export default function Thoughts() {
           size="lg"
         >
           {selectedThought && (
-            <div className="p-6">
+            <div className="p-6 bg-vintage-paper">
               <div className="flex items-center gap-4 mb-4">
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
+                <div className="vintage-stamp">
                   {categories.find((c) => c.value === selectedThought.category)?.label}
-                </span>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                </div>
+                <div className="flex items-center gap-2 text-sm vintage-number">
                   <Calendar size={16} />
                   {format(new Date(selectedThought.created_at!), 'yyyy年MM月dd日')}
                 </div>
               </div>
-              <div className="prose max-w-none">
-                <p className="text-gray-700 whitespace-pre-wrap">{selectedThought.content}</p>
+              <div className="vintage-divider"></div>
+              <div className="prose max-w-none mt-4">
+                <p className="text-vintage-dark whitespace-pre-wrap">{selectedThought.content}</p>
               </div>
               {selectedThought.tags && selectedThought.tags.length > 0 && (
-                <div className="flex items-center gap-2 flex-wrap mt-6 pt-6 border-t border-gray-200">
-                  <Tag size={16} className="text-gray-400" />
-                  {selectedThought.tags.map((tag, index) => (
-                    <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                <div className="flex items-center gap-2 flex-wrap mt-6 pt-6 border-t-2 border-dashed border-vintage-border">
+                  <Tag size={16} className="text-vintage-brown" />
+                  {selectedThought.tags.map((tag, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-white text-vintage-dark text-sm rounded border-2 border-dashed border-vintage-border">
                       {tag}
                     </span>
                   ))}

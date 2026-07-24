@@ -47,16 +47,24 @@ export default function NewsList() {
 
   return (
     <div className="space-y-4">
-      {news.map((item) => (
-        <Card key={item.id}>
+      {news.map((item, index) => (
+        <Card key={item.id} number={String(index + 1).padStart(4, '0')}>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
-              <p className="text-gray-600 text-sm mb-3">{item.content}</p>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
-                {item.source && <span>来源：{item.source}</span>}
+              <div className="flex items-center gap-3 mb-2">
+                <Newspaper size={20} className="text-vintage-brown" />
+                <h3 className="text-lg font-bold text-vintage-dark">{item.title}</h3>
+              </div>
+              <div className="vintage-divider"></div>
+              <p className="text-vintage-brown text-sm mb-3 mt-3">{item.content}</p>
+              <div className="flex items-center gap-4 text-xs text-vintage-brown border-t border-dashed border-vintage-border pt-3">
+                {item.source && (
+                  <span className="vintage-number">来源: {item.source}</span>
+                )}
                 {item.published_at && (
-                  <span>{format(new Date(item.published_at), 'yyyy-MM-dd HH:mm')}</span>
+                  <span className="vintage-number">
+                    {format(new Date(item.published_at), 'yyyy.MM.dd HH:mm')}
+                  </span>
                 )}
               </div>
             </div>
@@ -65,7 +73,7 @@ export default function NewsList() {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-shrink-0 text-blue-600 hover:text-blue-700"
+                className="flex-shrink-0 text-vintage-red hover:text-vintage-dark transition-colors"
               >
                 <ExternalLink size={20} />
               </a>

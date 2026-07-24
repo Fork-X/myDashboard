@@ -47,27 +47,31 @@ export default function ReviewTimeline() {
 
   return (
     <div className="space-y-6">
-      {reviews.map((review) => (
-        <Card key={review.id}>
+      {reviews.map((review, index) => (
+        <Card key={review.id} number={format(new Date(review.date), 'MMdd')}>
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="text-blue-600" size={24} />
+            <div className="flex-shrink-0 w-16 h-16 bg-vintage-brown bg-opacity-10 rounded-lg flex items-center justify-center border-2 border-dashed border-vintage-brown">
+              <Calendar className="text-vintage-brown" size={24} />
             </div>
             <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-gray-900">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-vintage-dark">
                   {format(new Date(review.date), 'yyyy年MM月dd日')}
                 </h3>
+                <div className="vintage-stamp">
+                  已复盘
+                </div>
               </div>
+              <div className="vintage-divider"></div>
               {review.market_summary && (
                 <div className="mb-3">
-                  <span className="text-sm font-medium text-gray-700">市场总结：</span>
-                  <p className="text-gray-600 text-sm mt-1">{review.market_summary}</p>
+                  <span className="text-sm font-bold text-vintage-dark">市场总结</span>
+                  <p className="text-vintage-brown text-sm mt-1">{review.market_summary}</p>
                 </div>
               )}
               <div>
-                <span className="text-sm font-medium text-gray-700">复盘内容：</span>
-                <p className="text-gray-600 text-sm mt-1 whitespace-pre-wrap">{review.content}</p>
+                <span className="text-sm font-bold text-vintage-dark">复盘内容</span>
+                <p className="text-vintage-brown text-sm mt-1 whitespace-pre-wrap">{review.content}</p>
               </div>
             </div>
           </div>
