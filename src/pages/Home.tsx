@@ -44,10 +44,21 @@ export default function Home() {
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-vintage-dark mb-3">欢迎回来</h1>
+        <div className="mb-8 text-center relative">
+          <div className="inline-block relative">
+            <h1 className="text-4xl font-bold text-vintage-dark mb-3">欢迎回来</h1>
+            <div className="absolute -top-2 -right-12 vintage-stamp text-xs transform -rotate-12">
+              VIP
+            </div>
+          </div>
           <div className="vintage-divider max-w-md mx-auto"></div>
           <p className="text-vintage-brown mt-3">选择一个模块开始管理您的内容</p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-xs vintage-number opacity-60">
+            <span>档案编号</span>
+            <span className="px-2 py-1 bg-vintage-brown bg-opacity-10 border border-dashed border-vintage-brown rounded">
+              {new Date().getFullYear()}-{String(new Date().getMonth() + 1).padStart(2, '0')}-001
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

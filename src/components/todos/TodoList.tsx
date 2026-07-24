@@ -195,8 +195,13 @@ export default function TodoList() {
                 {completedTodos.map((todo, index) => (
                   <div
                     key={todo.id}
-                    className="vintage-card p-4 flex items-start gap-3 opacity-60"
+                    className="vintage-card p-4 flex items-start gap-3 relative overflow-hidden"
                   >
+                    <div className="absolute top-4 right-4 vintage-seal opacity-80 pointer-events-none">
+                      <div className="w-16 h-16 rounded-full border-4 border-vintage-red flex items-center justify-center transform rotate-12">
+                        <span className="text-vintage-red font-bold text-xs">已完成</span>
+                      </div>
+                    </div>
                     <span className="vintage-number text-xs mt-1">
                       {String(index + 1).padStart(2, '0')}
                     </span>
@@ -207,11 +212,11 @@ export default function TodoList() {
                       <CheckSquare size={20} />
                     </button>
                     <div className="flex-1">
-                      <h4 className="font-bold text-vintage-dark line-through">{todo.title}</h4>
+                      <h4 className="font-bold text-vintage-dark line-through opacity-60">{todo.title}</h4>
                       {todo.description && (
-                        <p className="text-sm text-vintage-brown mt-1 line-through">{todo.description}</p>
+                        <p className="text-sm text-vintage-brown mt-1 line-through opacity-60">{todo.description}</p>
                       )}
-                      <p className="text-xs vintage-number mt-2">
+                      <p className="text-xs vintage-number mt-2 opacity-60">
                         完成于 {format(new Date(todo.completed_at!), 'yyyy.MM.dd HH:mm')}
                       </p>
                     </div>

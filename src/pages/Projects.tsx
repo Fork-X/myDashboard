@@ -8,6 +8,51 @@ import { Folder, Github, ExternalLink, Code } from 'lucide-react';
 
 type Project = Tables<'projects'>;
 
+const mockProjects: Project[] = [
+  {
+    id: 'mock-1',
+    name: '个人看板系统',
+    description: '基于 React + TypeScript + Supabase 构建的复古风格个人管理系统，融合国风设计元素',
+    tech_stack: ['React', 'TypeScript', 'Tailwind CSS', 'Supabase'],
+    github_url: 'https://github.com/example/personal-dashboard',
+    demo_url: 'https://demo.example.com',
+    image_url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&q=80',
+    created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-01-15T10:00:00Z'
+  },
+  {
+    id: 'mock-2',
+    name: '投资知识库',
+    description: '整理和管理投资相关的知识、复盘和热点新闻，帮助建立系统化的投资思维框架',
+    tech_stack: ['Vue 3', 'Vite', 'Element Plus', 'PostgreSQL'],
+    github_url: 'https://github.com/example/investment-kb',
+    image_url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80',
+    created_at: '2024-02-20T14:30:00Z',
+    updated_at: '2024-02-20T14:30:00Z'
+  },
+  {
+    id: 'mock-3',
+    name: '职业发展时间轴',
+    description: '记录职业生涯的重要节点和成长历程，可视化展示个人发展轨迹',
+    tech_stack: ['Next.js', 'React', 'Prisma', 'MySQL'],
+    demo_url: 'https://career.example.com',
+    image_url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80',
+    created_at: '2024-03-10T09:15:00Z',
+    updated_at: '2024-03-10T09:15:00Z'
+  },
+  {
+    id: 'mock-4',
+    name: '思维碎片收集器',
+    description: '随时记录灵感、想法和思考，支持标签分类和全文搜索',
+    tech_stack: ['Svelte', 'SvelteKit', 'SQLite'],
+    github_url: 'https://github.com/example/thoughts-collector',
+    demo_url: 'https://thoughts.example.com',
+    image_url: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&q=80',
+    created_at: '2024-04-05T16:45:00Z',
+    updated_at: '2024-04-05T16:45:00Z'
+  }
+];
+
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,9 +69,11 @@ export default function Projects() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProjects(data || []);
+      const dbProjects = data || [];
+      setProjects(dbProjects.length > 0 ? dbProjects : mockProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
+      setProjects(mockProjects);
     } finally {
       setLoading(false);
     }
