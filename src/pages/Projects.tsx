@@ -4,7 +4,7 @@ import { Tables } from '../onedaycloud/types';
 import Card from '../components/common/Card';
 import Loading from '../components/common/Loading';
 import EmptyState from '../components/common/EmptyState';
-import KnowledgeAssistant from '../components/investment/KnowledgeAssistant';
+import WorkflowAssistant from '../components/projects/WorkflowAssistant';
 import { Folder, Github, ExternalLink, Code, MessageCircle } from 'lucide-react';
 
 type Project = Tables<'projects'>;
@@ -116,19 +116,20 @@ export default function Projects() {
 
         <div className="mt-8 pt-8 border-t-2 border-dashed border-vintage-border">
           <div className="vintage-card p-6 text-center">
-            <h3 className="text-xl font-bold text-vintage-dark mb-3">AI 知识助手</h3>
-            <p className="text-vintage-brown mb-4">有投资理财相关的问题？让 AI 助手帮您解答</p>
+            <div className="vintage-stamp mb-4">工作助手</div>
+            <h3 className="text-xl font-bold text-vintage-dark mb-3">保证金造数助手</h3>
+            <p className="text-vintage-brown mb-4">用于保证金造数执行的问答助手，帮您解答相关问题</p>
             <button
               onClick={() => setShowAssistant(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
             >
               <MessageCircle size={20} />
-              <span>打开 AI 知识助手</span>
+              <span>打开助手</span>
             </button>
           </div>
         </div>
 
-        <KnowledgeAssistant isOpen={showAssistant} onClose={() => setShowAssistant(false)} />
+        <WorkflowAssistant isOpen={showAssistant} onClose={() => setShowAssistant(false)} />
       </div>
     </div>
   );

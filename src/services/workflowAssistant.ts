@@ -1,12 +1,13 @@
 /**
- * 知识库查询服务
+ * 保证金造数助手服务
  * 
  * 功能说明：
  * - 集成 Idealab Workflow (RF的AI-知识库1.0)
+ * - 用于保证金造数执行的问答
  * - 提供流式问答接口
  * - 支持实时内容更新
  * 
- * 应用标识：个人看板系统 - 知识库模块
+ * 应用标识：个人看板系统 - 保证金造数助手
  * Ideas Code: EGhnPxLcyge
  */
 
@@ -21,7 +22,7 @@ interface IdealabResponse {
   };
 }
 
-interface KnowledgeQueryOptions {
+interface WorkflowQueryOptions {
   question: string;
   variableMap?: Record<string, string>;
   onUpdate?: (content: string) => void;
@@ -37,6 +38,9 @@ async function runIdeasStream(
 ): Promise<Response> {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const url = `${baseUrl}/api/idealabworkflow/ideaPage/runIdeas/${experimentCode}/${version}`;
+
+  console.log('调用 Workflow API:', url);
+  console.log('请求参数:', { question, variableMap });
 
   const response = await fetch(url, {
     method: 'POST',
@@ -54,13 +58,15 @@ async function runIdeasStream(
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    const errorText = await response.text();
+    console.error('API 错误响应:', errorText);
+    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
   }
 
   return response;
 }
 
-export async function queryKnowledgeBase(options: KnowledgeQueryOptions): Promise<string> {
+export async function queryWorkflow(options: WorkflowQueryOptions): Promise<string> {
   const { question, variableMap = {}, onUpdate, onComplete, onError } = options;
 
   try {
@@ -108,7 +114,7 @@ export async function queryKnowledgeBase(options: KnowledgeQueryOptions): Promis
                 }
               }
             } catch (e) {
-              console.error('解析 JSON 失败:', e);
+              console.error('解析 JSON 失败:', e, '原始数据:', line);
             }
           }
         }
@@ -117,6 +123,7 @@ export async function queryKnowledgeBase(options: KnowledgeQueryOptions): Promis
 
     return fullContent;
   } catch (error) {
+    console.error('Workflow 查询错误:', error);
     const err = error instanceof Error ? error : new Error('Unknown error');
     if (onError) {
       onError(err);
@@ -125,6 +132,6 @@ export async function queryKnowledgeBase(options: KnowledgeQueryOptions): Promis
   }
 }
 
-export async function queryKnowledgeBaseSimple(question: string): Promise<string> {
-  return queryKnowledgeBase({ question });
+export async function queryWorkflowSimple(question: string): Promise<string> {
+  return queryWorkflow({ question });
 }
