@@ -104,3 +104,6 @@ vendor/
 .stats
 .config
 .accesslog
+
+# Local Git worktrees
+.worktrees/
