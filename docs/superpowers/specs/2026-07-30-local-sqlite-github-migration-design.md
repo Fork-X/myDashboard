@@ -2,7 +2,7 @@
 
 Date: 2026-07-30
 
-Status: Approved direction, pending written-spec review
+Status: Approved for implementation
 
 ## Goal
 
@@ -100,6 +100,8 @@ Stores goals and TODO items.
 Required columns:
 
 - `id`
+- `kind`: `goal` or `todo`
+- `period`: `year`, `month`, or `null`
 - `title`
 - `description`
 - `status`
@@ -144,7 +146,7 @@ The first release exposes only:
 - `GET /api/health`
 - `GET /api/records?domain=<domain>`
 - `GET /api/records/:id`
-- `GET /api/tasks`
+- `GET /api/tasks?kind=<goal|todo>`
 - `POST /api/tasks`
 - `PATCH /api/tasks/:id`
 
