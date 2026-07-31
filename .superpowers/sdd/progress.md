@@ -20,4 +20,6 @@ Plan 1 Task 6：完成（提交 1acb94a..9158ce3；审查通过；full 23/23，t
 Plan 1 Task 7：完成（提交 9158ce3..4cd4375；双审通过；full 24/24，skip=0；typecheck/build/Docker build/health/seed/restart/持久化通过）。
 Plan 1 完成门：空库真实 API 返回 records/tasks 空数组；Docker 验收使用 39115，停止后宿主 SQLite 仍保留 demo 行。
 Minor 待终审复核：Task 7 运行镜像仍包含 `server/**/*.test.mjs`，不影响运行与隐私扫描。
-下一项：Plan 2 Task 1 — Load only the three approved v3 indexes。
+Plan 2 Task 1：完成（提交 a3ac334..bae0e43；双审通过；RED=ERR_MODULE_NOT_FOUND；focused 2/2，full 26/26，skip=0；typecheck/build 通过）。
+Minor 待终审复核：临时 v2 fixture 的 `mkdir` 位于 `try` 前；未逐一覆盖 topics/projects v2 与三类非数组输入。
+下一项：Plan 2 Task 2 — Add the ignored local privacy mapping boundary。
