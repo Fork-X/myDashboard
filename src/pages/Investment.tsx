@@ -1,16 +1,31 @@
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { BookOpen, Calendar, Newspaper } from 'lucide-react';
+import { BookOpen, Calendar } from 'lucide-react';
 import KnowledgeList from '../components/investment/KnowledgeList';
 import ReviewTimeline from '../components/investment/ReviewTimeline';
-import NewsList from '../components/investment/NewsList';
+import Loading from '../components/common/Loading';
+import ErrorState from '../components/common/ErrorState';
+import { useRecords } from '../hooks/useRecords';
 
 const tabs = [
   { path: '', label: '投资知识', icon: BookOpen },
-  { path: 'review', label: '每日复盘', icon: Calendar },
-  { path: 'news', label: '热点消息', icon: Newspaper },
+  { path: 'review', label: '复盘与决策', icon: Calendar },
 ];
 
 export default function Investment() {
+  const { data, loading, error } = useRecords('investment');
+
+  if (loading) return <Loading />;
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <ErrorState message={error} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
@@ -37,9 +52,18 @@ export default function Investment() {
         </div>
 
         <Routes>
-          <Route index element={<KnowledgeList />} />
-          <Route path="review" element={<ReviewTimeline />} />
-          <Route path="news" element={<NewsList />} />
+          <Route
+            index
+            element={<KnowledgeList records={data.filter((item) => item.type === 'knowledge')} />}
+          />
+          <Route
+            path="review"
+            element={
+              <ReviewTimeline
+                records={data.filter((item) => ['experience', 'decision'].includes(item.type))}
+              />
+            }
+          />
         </Routes>
       </div>
     </div>

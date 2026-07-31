@@ -1,0 +1,49 @@
+export type RecordDomain = 'investment' | 'thought' | 'career' | 'project';
+export type RecordType = 'knowledge' | 'idea' | 'decision' | 'experience' | 'project';
+
+export interface RecordItem<
+  TPayload extends object = Record<string, unknown>,
+  TDomain extends RecordDomain = RecordDomain,
+> {
+  id: string;
+  domain: TDomain;
+  type: RecordType;
+  title: string;
+  content: string;
+  status: string;
+  occurredAt: string | null;
+  tags: string[];
+  payload: TPayload;
+  sourceRef: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CareerPayload {
+  companyAlias: 'A公司' | 'Y公司' | 'H公司';
+  position: string;
+  startDate: string;
+  endDate: string | null;
+  responsibilities: string;
+  projects: string[];
+  isCurrent: boolean;
+}
+
+export interface ProjectPayload {
+  techStack: string[];
+  repositoryUrl: string | null;
+  demoUrl: string | null;
+  currentFocus: string;
+}
+
+export interface RecordPayloadMap {
+  investment: Record<string, unknown>;
+  thought: Record<string, unknown>;
+  career: CareerPayload;
+  project: ProjectPayload;
+}
+
+export type RecordForDomain<TDomain extends RecordDomain> = RecordItem<
+  RecordPayloadMap[TDomain],
+  TDomain
+>;
