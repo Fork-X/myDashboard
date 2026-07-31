@@ -22,4 +22,6 @@ Plan 1 完成门：空库真实 API 返回 records/tasks 空数组；Docker 验�
 Minor 待终审复核：Task 7 运行镜像仍包含 `server/**/*.test.mjs`，不影响运行与隐私扫描。
 Plan 2 Task 1：完成（提交 a3ac334..bae0e43；双审通过；RED=ERR_MODULE_NOT_FOUND；focused 2/2，full 26/26，skip=0；typecheck/build 通过）。
 Minor 待终审复核：临时 v2 fixture 的 `mkdir` 位于 `try` 前；未逐一覆盖 topics/projects v2 与三类非数组输入。
-下一项：Plan 2 Task 2 — Add the ignored local privacy mapping boundary。
+Plan 2 Task 2：完成（提交 beacfa2..31abb91；双审通过；RED=ERR_MODULE_NOT_FOUND；focused 14/14，full 40/40，skip=0；typecheck/build 通过）。
+Minor 待终审复核：序列化异常保留 `cause`，恶意 `toJSON()` 理论上可在 cause 中夹带文本；当前输入为 JSON 派生对象。
+下一项：Plan 2 Task 3 — Map approved Self content into runtime records and goals。
