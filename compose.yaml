@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:${DASHBOARD_PORT:-3015}:3015"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

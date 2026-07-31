@@ -1,0 +1,38 @@
+[
+  {
+    "id": "demo:goal:year",
+    "kind": "goal",
+    "period": "year",
+    "title": "示例年度目标：保持稳定节奏",
+    "description": "完全虚构的演示目标。",
+    "status": "in_progress",
+    "targetAt": "2026-12-31T00:00:00.000Z",
+    "completedAt": null,
+    "sourceRef": null,
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "demo:goal:month",
+    "kind": "goal",
+    "period": "month",
+    "title": "演示月度目标：完成一次复盘",
+    "description": "完全虚构的演示目标。",
+    "status": "pending",
+    "targetAt": "2026-01-31T00:00:00.000Z",
+    "completedAt": null,
+    "sourceRef": null,
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "demo:todo:backup",
+    "kind": "todo",
+    "period": null,
+    "title": "示例待办：验证本地备份",
+    "description": "完全虚构的演示待办。",
+    "status": "pending",
+    "targetAt": null,
+    "completedAt": null,
+    "sourceRef": null,
+    "createdAt": "2026-01-16T09:00:00.000Z"
+  }
+]
