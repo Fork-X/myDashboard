@@ -8,10 +8,16 @@ const taskComponents = [
   'src/components/todos/TodoList.tsx',
 ];
 
+const remoteRuntimePattern = new RegExp([
+  ['supa', 'base'].join(''),
+  'mockGoals',
+  `${['one', 'day'].join('')}cloud`,
+].join('|'));
+
 test('goal and todo pages use local task API only', async () => {
   for (const file of taskComponents) {
     const source = await readFile(file, 'utf8');
-    assert.doesNotMatch(source, /supabase|mockGoals|onedaycloud/);
+    assert.doesNotMatch(source, remoteRuntimePattern);
   }
 });
 

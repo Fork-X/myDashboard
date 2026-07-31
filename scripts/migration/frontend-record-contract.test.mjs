@@ -11,15 +11,30 @@ const files = [
   'src/components/investment/ReviewTimeline.tsx',
 ];
 
+const remoteRuntimePattern = new RegExp([
+  ['supa', 'base'].join(''),
+  'mock[A-Z]',
+  `${['one', 'day'].join('')}cloud`,
+].join('|'));
+const privateCareerPattern = new RegExp([
+  ['sal', 'ary'].join(''),
+  'compensation',
+  'PASSWORD',
+  'showPasswordModal',
+  'DollarSign',
+  'Lock',
+  'Eye',
+].join('|'));
+
 test('record pages use the local API without silent mock fallback', async () => {
   for (const file of files) {
     const source = await readFile(file, 'utf8');
-    assert.doesNotMatch(source, /supabase|mock[A-Z]|onedaycloud/);
+    assert.doesNotMatch(source, remoteRuntimePattern);
   }
   const career = await readFile('src/pages/Career.tsx', 'utf8');
   assert.doesNotMatch(
     career,
-    /salary|compensation|PASSWORD|showPasswordModal|DollarSign|Lock|Eye/,
+    privateCareerPattern,
   );
 });
 

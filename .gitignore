@@ -107,3 +107,12 @@ vendor/
 
 # Local Git worktrees
 .worktrees/
+
+# Local dashboard data
+data/
+backups/
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+import-map.local.json

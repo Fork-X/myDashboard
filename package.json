@@ -1,21 +1,25 @@
 {
-  "name": "personal-dashboard",
-  "version": "1.0.0",
+  "name": "local-personal-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=24.15.0"
+  },
   "scripts": {
-    "dev": "webpack serve",
+    "dev": "node scripts/dev.mjs",
     "build": "webpack --mode production",
-    "typecheck": "tsc --noEmit"
+    "start": "node server/index.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test",
+    "db:migrate": "node server/cli/migrate.mjs",
+    "seed:demo": "node server/cli/seed-demo.mjs"
   },
   "dependencies": {
-    "@ali/oneday-frontend-sdk": "^1.0.1",
-    "@supabase/supabase-js": "^2.98.0",
     "date-fns": "^2.30.0",
-    "framer-motion": "^11.16.1",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.0",
-    "recharts": "^2.10.0"
+    "react-router-dom": "^6.8.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.5",
