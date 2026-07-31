@@ -45,6 +45,12 @@ module.exports = (env, argv) => {
     devServer: {
       port: 3015,
       allowedHosts: 'all',
+      proxy: [
+        {
+          context: ['/api'],
+          target: 'http://127.0.0.1:3016'
+        }
+      ],
       // HMR 客户端从页面自身 location 推导 WS 地址,避免把内部端口拼到网关域名后面
       // auto -> 跟随页面协议(https->wss);0.0.0.0 -> 用页面 hostname;0 -> 用页面端口(443 即省略)
       client: {
