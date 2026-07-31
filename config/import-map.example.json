@@ -1,0 +1,22 @@
+{
+  "topicDomains": {
+    "topic-investment": "investment",
+    "topic-thought": "thought",
+    "topic-career": "career"
+  },
+  "goalTopics": {
+    "topic-year-goal": "year",
+    "topic-month-goal": "month"
+  },
+  "careerAliases": {
+    "示例来源公司一": "A公司",
+    "示例来源公司二": "Y公司",
+    "示例来源公司三": "H公司"
+  },
+  "redactions": {
+    "示例真实姓名": "匿名用户"
+  },
+  "blockedTerms": [
+    "示例禁止发布词"
+  ]
+}
