@@ -1,83 +1,80 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../onedaycloud/client';
-import { Tables } from '../../onedaycloud/types';
+import { useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import Loading from '../common/Loading';
 import EmptyState from '../common/EmptyState';
+import ErrorState from '../common/ErrorState';
 import { CheckSquare, Square, X, Plus } from 'lucide-react';
-
-type Todo = Tables<'todos'>;
+import { useTasks } from '../../hooks/useTasks';
 
 export default function TodoList() {
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: todos, loading, error, add, setStatus } = useTasks('todo');
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoDescription, setNewTodoDescription] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [mutationBusy, setMutationBusy] = useState(false);
+  const mutationBusyRef = useRef(false);
+  const mounted = useRef(false);
 
   useEffect(() => {
-    fetchTodos();
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
-  const fetchTodos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('todos')
-        .select('*')
-        .order('created_at', { ascending: false });
+  const beginMutation = () => {
+    if (mutationBusyRef.current) return false;
+    mutationBusyRef.current = true;
+    if (mounted.current) setMutationBusy(true);
+    return true;
+  };
 
-      if (error) throw error;
-      setTodos(data || []);
-    } catch (error) {
-      console.error('Error fetching todos:', error);
-    } finally {
-      setLoading(false);
-    }
+  const finishMutation = () => {
+    mutationBusyRef.current = false;
+    if (mounted.current) setMutationBusy(false);
   };
 
   const addTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTodoTitle.trim()) return;
+    const title = newTodoTitle.trim();
+    if (!title || !beginMutation()) return;
 
     try {
-      const { error } = await supabase.from('todos').insert({
-        title: newTodoTitle,
-        description: newTodoDescription || null,
-        status: 'pending',
+      await add({
+        title,
+        description: newTodoDescription.trim(),
       });
-
-      if (error) throw error;
-
-      setNewTodoTitle('');
-      setNewTodoDescription('');
-      setShowAddForm(false);
-      fetchTodos();
-    } catch (error) {
-      console.error('Error adding todo:', error);
+      if (mounted.current) {
+        setNewTodoTitle('');
+        setNewTodoDescription('');
+        setShowAddForm(false);
+      }
+    } catch {
+      // useTasks exposes the failure through its error state.
+    } finally {
+      finishMutation();
     }
   };
 
-  const updateTodoStatus = async (id: string, status: string) => {
+  const updateTodoStatus = async (
+    id: string,
+    status: 'pending' | 'completed' | 'cancelled',
+  ) => {
+    if (!beginMutation()) return;
     try {
-      const { error } = await supabase
-        .from('todos')
-        .update({
-          status,
-          completed_at: status === 'completed' ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-      fetchTodos();
-    } catch (error) {
-      console.error('Error updating todo:', error);
+      await setStatus(id, status);
+    } catch {
+      // useTasks exposes the failure through its error state.
+    } finally {
+      finishMutation();
     }
   };
 
-  if (loading) return <Loading />;
+  if (loading && todos.length === 0) return <Loading />;
 
-  const pendingTodos = todos.filter((t) => t.status === 'pending');
+  const pendingTodos = todos.filter(
+    (todo) => todo.status === 'pending' || todo.status === 'in_progress',
+  );
   const completedTodos = todos.filter((t) => t.status === 'completed');
 
   return (
@@ -89,6 +86,7 @@ export default function TodoList() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
+          disabled={mutationBusy}
           className="flex items-center gap-2 px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
         >
           <Plus size={18} />
@@ -105,23 +103,27 @@ export default function TodoList() {
             placeholder="待办标题"
             className="w-full px-4 py-2 border-2 border-dashed border-vintage-border rounded mb-3 bg-white focus:outline-none focus:border-vintage-red"
             autoFocus
+            disabled={mutationBusy}
           />
           <textarea
             value={newTodoDescription}
             onChange={(e) => setNewTodoDescription(e.target.value)}
             placeholder="描述（可选）"
             rows={3}
+            disabled={mutationBusy}
             className="w-full px-4 py-2 border-2 border-dashed border-vintage-border rounded mb-3 bg-white focus:outline-none focus:border-vintage-red"
           />
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
+              disabled={mutationBusy || !newTodoTitle.trim()}
+              className="px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold disabled:cursor-not-allowed disabled:opacity-50"
             >
-              添加
+              {mutationBusy ? '保存中...' : '添加'}
             </button>
             <button
               type="button"
+              disabled={mutationBusy}
               onClick={() => {
                 setShowAddForm(false);
                 setNewTodoTitle('');
@@ -135,7 +137,9 @@ export default function TodoList() {
         </form>
       )}
 
-      {todos.length === 0 ? (
+      {error && <ErrorState message={error} />}
+
+      {todos.length === 0 && !error ? (
         <EmptyState
           icon={<CheckSquare size={64} />}
           title="暂无待办事项"
@@ -160,7 +164,9 @@ export default function TodoList() {
                     </span>
                     <button
                       onClick={() => updateTodoStatus(todo.id, 'completed')}
-                      className="flex-shrink-0 mt-1 text-vintage-brown hover:text-vintage-red transition-colors"
+                      disabled={mutationBusy}
+                      aria-label={`完成待办：${todo.title}`}
+                      className="flex-shrink-0 mt-1 text-vintage-brown hover:text-vintage-red transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Square size={20} />
                     </button>
@@ -170,12 +176,14 @@ export default function TodoList() {
                         <p className="text-sm text-vintage-brown mt-1">{todo.description}</p>
                       )}
                       <p className="text-xs vintage-number mt-2">
-                        {format(new Date(todo.created_at!), 'yyyy.MM.dd HH:mm')}
+                        {format(new Date(todo.createdAt), 'yyyy.MM.dd HH:mm')}
                       </p>
                     </div>
                     <button
                       onClick={() => updateTodoStatus(todo.id, 'cancelled')}
-                      className="flex-shrink-0 text-vintage-brown hover:text-vintage-red transition-colors"
+                      disabled={mutationBusy}
+                      aria-label={`取消待办：${todo.title}`}
+                      className="flex-shrink-0 text-vintage-brown hover:text-vintage-red transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <X size={20} />
                     </button>
@@ -207,7 +215,9 @@ export default function TodoList() {
                     </span>
                     <button
                       onClick={() => updateTodoStatus(todo.id, 'pending')}
-                      className="flex-shrink-0 mt-1 text-vintage-red hover:text-vintage-brown transition-colors"
+                      disabled={mutationBusy}
+                      aria-label={`重新打开待办：${todo.title}`}
+                      className="flex-shrink-0 mt-1 text-vintage-red hover:text-vintage-brown transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <CheckSquare size={20} />
                     </button>
@@ -217,7 +227,9 @@ export default function TodoList() {
                         <p className="text-sm text-vintage-brown mt-1 line-through opacity-60">{todo.description}</p>
                       )}
                       <p className="text-xs vintage-number mt-2 opacity-60">
-                        完成于 {format(new Date(todo.completed_at!), 'yyyy.MM.dd HH:mm')}
+                        {todo.completedAt
+                          ? `完成于 ${format(new Date(todo.completedAt), 'yyyy.MM.dd HH:mm')}`
+                          : '已完成'}
                       </p>
                     </div>
                   </div>

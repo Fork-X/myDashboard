@@ -5,6 +5,7 @@ import type {
   RecordForDomain,
   RecordPayloadMap,
   RecordType,
+  TaskItem,
 } from './types';
 
 const INVALID_DATA_MESSAGE = '本地服务返回无效数据';
@@ -12,6 +13,14 @@ const UNAVAILABLE_MESSAGE = '本地服务不可用';
 const recordDomains: RecordDomain[] = ['investment', 'thought', 'career', 'project'];
 const recordTypes: RecordType[] = ['knowledge', 'idea', 'decision', 'experience', 'project'];
 const companyAliases: CareerPayload['companyAlias'][] = ['A公司', 'Y公司', 'H公司'];
+const taskKinds: TaskItem['kind'][] = ['goal', 'todo'];
+const taskPeriods: Exclude<TaskItem['period'], null>[] = ['year', 'month'];
+const taskStatuses: TaskItem['status'][] = [
+  'pending',
+  'in_progress',
+  'completed',
+  'cancelled',
+];
 
 export class ApiError extends Error {
   constructor(message: string) {
@@ -59,6 +68,71 @@ export function listRecords<TDomain extends RecordDomain>(
   if (type) query.set('type', type);
   return request<unknown>(`/api/records?${query}`)
     .then((data) => parseRecordList(data, domain));
+}
+
+export function listTasks(kind: TaskItem['kind']): Promise<TaskItem[]> {
+  return request<unknown>(`/api/tasks?kind=${kind}`)
+    .then((data) => parseTaskList(data, kind));
+}
+
+export function createTask(input: {
+  title: string;
+  description: string;
+}): Promise<TaskItem> {
+  return request<unknown>('/api/tasks', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }).then((data) => parseTask(data, 'todo'));
+}
+
+export function patchTask(
+  id: string,
+  status: TaskItem['status'],
+): Promise<TaskItem> {
+  return request<unknown>(`/api/tasks/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  }).then((data) => parseTask(data));
+}
+
+function parseTaskList(value: unknown, kind: TaskItem['kind']): TaskItem[] {
+  if (!Array.isArray(value)) invalidData();
+  return value.map((item) => parseTask(item, kind));
+}
+
+function parseTask(value: unknown, expectedKind?: TaskItem['kind']): TaskItem {
+  if (
+    !isObject(value)
+    || typeof value.id !== 'string'
+    || !isTaskKind(value.kind)
+    || (expectedKind !== undefined && value.kind !== expectedKind)
+    || !isTaskPeriod(value.period)
+    || (value.kind === 'goal' && value.period === null)
+    || (value.kind === 'todo' && value.period !== null)
+    || typeof value.title !== 'string'
+    || typeof value.description !== 'string'
+    || !isTaskStatus(value.status)
+    || !isNullableDate(value.targetAt)
+    || !isNullableDate(value.completedAt)
+    || !isNullableString(value.sourceRef)
+    || !isDateString(value.createdAt)
+    || !isDateString(value.updatedAt)
+  ) {
+    invalidData();
+  }
+  return {
+    id: value.id,
+    kind: value.kind,
+    period: value.period,
+    title: value.title,
+    description: value.description,
+    status: value.status,
+    targetAt: value.targetAt,
+    completedAt: value.completedAt,
+    sourceRef: value.sourceRef,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
 }
 
 function parseRecordList<TDomain extends RecordDomain>(
@@ -174,6 +248,20 @@ function isStringArray(value: unknown): value is string[] {
 
 function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
+}
+
+function isTaskKind(value: unknown): value is TaskItem['kind'] {
+  return typeof value === 'string' && taskKinds.some((kind) => kind === value);
+}
+
+function isTaskPeriod(value: unknown): value is TaskItem['period'] {
+  return value === null
+    || (typeof value === 'string' && taskPeriods.some((period) => period === value));
+}
+
+function isTaskStatus(value: unknown): value is TaskItem['status'] {
+  return typeof value === 'string'
+    && taskStatuses.some((status) => status === value);
 }
 
 function isDateString(value: unknown): value is string {

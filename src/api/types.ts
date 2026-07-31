@@ -47,3 +47,17 @@ export type RecordForDomain<TDomain extends RecordDomain> = RecordItem<
   RecordPayloadMap[TDomain],
   TDomain
 >;
+
+export interface TaskItem {
+  id: string;
+  kind: 'goal' | 'todo';
+  period: 'year' | 'month' | null;
+  title: string;
+  description: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  targetAt: string | null;
+  completedAt: string | null;
+  sourceRef: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
