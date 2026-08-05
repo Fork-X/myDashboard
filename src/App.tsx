@@ -13,9 +13,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
-          <Route path="investment/*" element={<Investment />} />
+          <Route path="investment" element={<Investment />} />
           <Route path="thoughts" element={<Thoughts />} />
-          <Route path="thoughts/:category" element={<Thoughts />} />
           <Route path="career" element={<Career />} />
           <Route path="todos/*" element={<Todos />} />
           <Route path="projects" element={<Projects />} />

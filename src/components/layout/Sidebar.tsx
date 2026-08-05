@@ -3,11 +3,11 @@ import { Home, TrendingUp, Lightbulb, Briefcase, CheckSquare, Folder } from 'luc
 
 const navItems = [
   { path: '/', icon: Home, label: '首页' },
-  { path: '/investment', icon: TrendingUp, label: '投资理财' },
+  { path: '/investment', icon: TrendingUp, label: '投资理财', pendingDesign: true },
   { path: '/thoughts', icon: Lightbulb, label: '个人思考' },
-  { path: '/career', icon: Briefcase, label: '职业生涯' },
+  { path: '/career', icon: Briefcase, label: '职业生涯', pendingDesign: true },
   { path: '/todos', icon: CheckSquare, label: '待办规划' },
-  { path: '/projects', icon: Folder, label: '个人项目' },
+  { path: '/projects', icon: Folder, label: '个人项目', pendingDesign: true },
 ];
 
 export default function Sidebar() {
@@ -35,6 +35,9 @@ export default function Sidebar() {
           >
             <item.icon size={20} />
             <span className="font-medium">{item.label}</span>
+            {item.pendingDesign && (
+              <span className="ml-auto text-xs opacity-70">待设计</span>
+            )}
           </NavLink>
         ))}
       </nav>
