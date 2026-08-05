@@ -1,24 +1,45 @@
 # Local Personal Dashboard
 
-这是一个本地优先的个人看板。数据只保存在本机 SQLite 中；新数据库默认没有任何记录，页面会如实显示空状态，不会自动加载演示数据。
+一个完全独立、本地优先的个人看板。Node 进程同时提供 React 页面、同源 HTTP API 和内嵌 SQLite；SQLite 是唯一运行时数据源。
 
-## 方式一：Docker
+本项目不读取 Self，不需要云账号，不接入外部数据库，不包含演示数据，也不包含个人数据。首次启动会自动创建数据库并执行迁移，数据库为空，页面如实显示空状态。
 
-需要 Docker Desktop 或兼容的 Docker Engine。复制端口配置并启动：
+## 功能范围
+
+- 个人思考：通过本地 CLI 预览并追加，网页只读。
+- 待办规划：可在网页新增、编辑和更新持续目标，追加不可修改的目标进展；TODO 支持新增、编辑、更新状态和删除。
+- 投资理财、职业生涯、个人项目目前是“功能待设计”的占位模块，不请求业务数据。
+
+## 本地运行
+
+前置条件：Node.js `>=24.15.0`。
+
+从全新检出开始安装、验证、构建并启动：
 
 ```bash
-cp .env.example .env
+npm ci
+npm test
+npm run typecheck
+npm run build
+npm start
+```
+
+打开 <http://127.0.0.1:3015>。启动过程会先执行数据库迁移，再监听端口；数据默认保存在 `data/dashboard.sqlite3`。按 `Ctrl+C` 停止服务，再次运行 `npm start` 会继续使用同一数据库。
+
+## Docker 运行
+
+前置条件：Docker Engine 和 Docker Compose；不需要在宿主机安装 Node.js。
+
+```bash
 docker compose up --build
 ```
 
-打开 <http://127.0.0.1:3015>。如需改端口，修改 `.env` 中的 `DASHBOARD_PORT`；服务仍只绑定宿主机 `127.0.0.1`。
+打开 <http://127.0.0.1:3015>。Compose 只启动一个 app 容器，并将宿主机的 `./data` 挂载为容器内的 `/app/data`（`./data:/app/data`）。因此 `./data/dashboard.sqlite3` 位于宿主机，容器重启或重建后仍会保留。健康检查访问 `/api/health`。
 
-数据文件位于项目目录的 `data/dashboard.sqlite3`，通过 `./data:/app/data` 挂载到容器。停止、再次启动或重启应用不会删除它：
+如需修改宿主机端口，可设置 `DASHBOARD_PORT`，例如：
 
 ```bash
-docker compose stop
-docker compose start
-docker compose restart app
+DASHBOARD_PORT=8080 docker compose up --build
 ```
 
 停止并移除容器：
@@ -27,58 +48,32 @@ docker compose restart app
 docker compose down
 ```
 
-不要使用 `docker compose down -v` 清理本地数据。
+## 导入个人思考
 
-## 方式二：直接运行
+准备一个绝对路径下的 JSON 文件，例如 `/absolute/path/to/thought.json`：
 
-需要 Node.js 24.18.0（可运行 `nvm use` 切换）：
-
-```bash
-npm ci && npm run db:migrate && npm run dev
+```json
+{
+  "title": "提炼后的标题",
+  "content": "提炼后的正文",
+  "tags": ["用户明确指定的标签"]
+}
 ```
 
-打开 <http://127.0.0.1:3015>。开发模式下，前端在 `3015`，本地 API 在 `3016`；按 `Ctrl+C` 停止两者。数据同样写入 `data/dashboard.sqlite3`，再次运行 `npm run dev` 即可重启。
-
-## 可选演示数据
-
-空数据库是正常状态。若想预览布局，可随时执行：
+先运行 preview。它只校验并打印规范化后的候选，不创建或写入数据库：
 
 ```bash
-npm run seed:demo
+npm run thought:import -- --input /absolute/path/to/thought.json
 ```
 
-Docker 中执行：
+确认内容后再显式写入：
 
 ```bash
-docker compose exec app node server/cli/seed-demo.mjs
+npm run thought:import -- --input /absolute/path/to/thought.json --apply
 ```
 
-演示数据的 ID 都以 `demo:` 开头，标题包含“示例”或“演示”，内容完全虚构。该命令只新增或更新这些固定的演示 ID，不会覆盖其他本地记录。
+`id` 和创建时间由系统生成；同一自然日重复 apply 相同标题和正文不会新增重复记录。CLI 不提供修改或删除已有思考的命令。
 
-## 备份
+## 首次运行
 
-最稳妥的方式是先停止应用，再复制数据库文件以及存在的 SQLite sidecar：
-
-```bash
-docker compose stop
-mkdir -p backups
-cp data/dashboard.sqlite3 backups/dashboard.sqlite3
-for sidecar in data/dashboard.sqlite3-wal data/dashboard.sqlite3-shm; do
-  if [ -f "$sidecar" ]; then cp "$sidecar" backups/; fi
-done
-```
-
-直接运行时先按 `Ctrl+C`，再执行同样的复制命令。恢复前也要停止应用，并保留同一备份时间点的 `dashboard.sqlite3`、`-wal` 和 `-shm` 文件。
-
-应用在线时，不要直接复制正在变化的文件；可使用本机 SQLite CLI 的一致性备份命令：
-
-```bash
-mkdir -p backups
-sqlite3 data/dashboard.sqlite3 ".backup 'backups/dashboard-live.sqlite3'"
-```
-
-## Self 导入与离线说明
-
-Self 导入命令将在 **Plan 2 完成后** 才会提供；当前版本还没有该命令，不要将演示 seed 当作真实内容导入。
-
-镜像构建和首次 `npm ci` 可能需要下载依赖；构建完成后的应用运行只读取本机镜像与 `./data`，不需要云账号、云凭证或网络连接。项目不接入云数据库，也不需要外部服务凭证。
+全新的 `data` 目录是正常状态：个人思考、持续目标、目标进展和 TODO 都为空。项目没有 seed 命令，也不会静默加载 Mock 或外部内容；可以从空状态开始在网页维护目标和 TODO，并通过上述 CLI 追加个人思考。
