@@ -16,7 +16,7 @@ export default function Sidebar() {
       <div className="h-16 flex items-center justify-center px-6 border-b-2 border-dashed border-vintage-border">
         <div className="text-center">
           <h1 className="text-xl font-bold text-vintage-dark">个人看板</h1>
-          <p className="text-xs text-vintage-brown vintage-number mt-1">NO.2024</p>
+          <p className="text-xs text-vintage-brown vintage-number mt-1">NO.2026</p>
         </div>
       </div>
       <nav className="p-4 space-y-2">
