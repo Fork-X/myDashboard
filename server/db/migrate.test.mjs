@@ -10,7 +10,7 @@ test('applies the independent schema exactly once', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dashboard-db-'));
   const db = openDatabase(join(root, 'dashboard.sqlite3'));
   try {
-    const migrationsDir = resolve('db/migrations');
+    const migrationsDir = resolve('server/db/migrations');
     assert.deepEqual(applyMigrations(db, migrationsDir), ['001_initial.sql']);
     assert.deepEqual(applyMigrations(db, migrationsDir), []);
 

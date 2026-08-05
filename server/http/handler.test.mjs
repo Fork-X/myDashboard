@@ -14,7 +14,7 @@ async function withTestServer(run, setup = async () => {}) {
   const db = openDatabase(join(root, 'db.sqlite3'));
   const server = createServer(createHandler({ db, publicDir: root }));
   try {
-    applyMigrations(db, resolve('db/migrations'));
+    applyMigrations(db, resolve('server/db/migrations'));
     await setup(root, db);
     await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
     const { port } = server.address();
@@ -377,7 +377,7 @@ test('returns 404 for missing todos and 400 for malformed todo bodies without wr
 test('serves health, static files, and rejects unknown API routes', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dashboard-api-'));
   const db = openDatabase(join(root, 'db.sqlite3'));
-  applyMigrations(db, resolve('db/migrations'));
+  applyMigrations(db, resolve('server/db/migrations'));
   await writeFile(join(root, 'index.html'), '<main>Dashboard shell</main>');
   await writeFile(join(root, 'bundle.js'), 'globalThis.dashboard = true;');
   const server = createServer(createHandler({ db, publicDir: root }));

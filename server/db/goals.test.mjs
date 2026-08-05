@@ -17,7 +17,7 @@ async function withDatabase(run) {
   const root = await mkdtemp(join(tmpdir(), 'dashboard-goals-'));
   const db = openDatabase(join(root, 'db.sqlite3'));
   try {
-    applyMigrations(db, resolve('db/migrations'));
+    applyMigrations(db, resolve('server/db/migrations'));
     await run(db);
   } finally {
     db.close();
