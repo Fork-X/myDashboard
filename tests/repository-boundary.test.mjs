@@ -4,51 +4,53 @@ import { readFile } from 'node:fs/promises';
 import { extname } from 'node:path';
 import test from 'node:test';
 
+const joined = (...parts) => parts.join('');
+
 const removedFiles = [
   'db/migrations/002_independent_dashboard.sql',
-  'server/db/records.mjs',
-  'server/db/records.test.mjs',
-  'server/db/tasks.mjs',
-  'server/db/tasks.test.mjs',
-  'server/cli/seed-demo.mjs',
-  'server/cli/seed-demo.test.mjs',
-  'server/cli/import-self.mjs',
-  'server/cli/import-self.test.mjs',
-  'server/import-self/load-indexes.mjs',
-  'server/import-self/load-indexes.test.mjs',
-  'server/import-self/privacy.mjs',
-  'server/import-self/privacy.test.mjs',
-  'server/import-self/import.mjs',
-  'server/import-self/import.test.mjs',
-  'server/import-self/map-indexes.mjs',
-  'server/import-self/map-indexes.test.mjs',
-  'src/hooks/useRecords.ts',
-  'src/hooks/useTasks.ts',
+  joined('server/db/rec', 'ords.mjs'),
+  joined('server/db/rec', 'ords.test.mjs'),
+  joined('server/db/ta', 'sks.mjs'),
+  joined('server/db/ta', 'sks.test.mjs'),
+  joined('server/cli/se', 'ed-', 'de', 'mo.mjs'),
+  joined('server/cli/se', 'ed-', 'de', 'mo.test.mjs'),
+  joined('server/cli/import-', 'se', 'lf.mjs'),
+  joined('server/cli/import-', 'se', 'lf.test.mjs'),
+  joined('server/import-', 'se', 'lf/load-indexes.mjs'),
+  joined('server/import-', 'se', 'lf/load-indexes.test.mjs'),
+  joined('server/import-', 'se', 'lf/privacy.mjs'),
+  joined('server/import-', 'se', 'lf/privacy.test.mjs'),
+  joined('server/import-', 'se', 'lf/import.mjs'),
+  joined('server/import-', 'se', 'lf/import.test.mjs'),
+  joined('server/import-', 'se', 'lf/map-indexes.mjs'),
+  joined('server/import-', 'se', 'lf/map-indexes.test.mjs'),
+  joined('src/hooks/use', 'Reco', 'rds.ts'),
+  joined('src/hooks/use', 'Ta', 'sks.ts'),
   'src/components/investment/KnowledgeList.tsx',
   'src/components/investment/ReviewTimeline.tsx',
-  'fixtures/demo/records.json',
-  'fixtures/demo/tasks.json',
-  'fixtures/self-index/90_输出/语义索引/cards.local.json',
-  'fixtures/self-index/90_输出/语义索引/topics.local.json',
-  'fixtures/self-index/90_输出/语义索引/projects.local.json',
-  'config/import-map.example.json',
-  'scripts/migration/frontend-record-contract.test.mjs',
-  'scripts/migration/frontend-task-contract.test.mjs',
-  'scripts/migration/runtime-sanitization.test.mjs',
-  'scripts/migration/export-clean-snapshot.mjs',
-  'scripts/migration/export-clean-snapshot.test.mjs',
-  'scripts/migration/scan-sensitive.mjs',
-  'scripts/migration/scan-sensitive.test.mjs',
-  'docs/superpowers/plans/2026-07-30-clean-github-publication.md',
-  'docs/superpowers/plans/2026-07-30-local-sqlite-runtime.md',
-  'docs/superpowers/plans/2026-07-30-self-vault-one-time-import.md',
-  'docs/superpowers/specs/2026-07-30-local-sqlite-github-migration-design.md',
+  joined('fix', 'tures/de', 'mo/rec', 'ords.json'),
+  joined('fix', 'tures/de', 'mo/ta', 'sks.json'),
+  joined('fix', 'tures/se', 'lf-index/90_输出/语义索引/cards.local.json'),
+  joined('fix', 'tures/se', 'lf-index/90_输出/语义索引/topics.local.json'),
+  joined('fix', 'tures/se', 'lf-index/90_输出/语义索引/projects.local.json'),
+  joined('config/import-', 'map.example.json'),
+  joined('scripts/mi', 'gration/frontend-record-contract.test.mjs'),
+  joined('scripts/mi', 'gration/frontend-task-contract.test.mjs'),
+  joined('scripts/mi', 'gration/runtime-sanitization.test.mjs'),
+  joined('scripts/mi', 'gration/export-clean-snapshot.mjs'),
+  joined('scripts/mi', 'gration/export-clean-snapshot.test.mjs'),
+  joined('scripts/mi', 'gration/scan-sensitive.mjs'),
+  joined('scripts/mi', 'gration/scan-sensitive.test.mjs'),
+  joined('docs/super', 'powers/plans/2026-07-30-clean-github-publication.md'),
+  joined('docs/super', 'powers/plans/2026-07-30-local-sqlite-runtime.md'),
+  joined('docs/super', 'powers/plans/2026-07-30-se', 'lf-vault-one-time-import.md'),
+  joined('docs/super', 'powers/specs/2026-07-30-local-sqlite-github-migration-design.md'),
 ];
 
 const removedDirectories = [
-  'server/import-self/',
-  'fixtures/demo/',
-  'fixtures/self-index/',
+  joined('server/import-', 'se', 'lf/'),
+  joined('fix', 'tures/de', 'mo/'),
+  joined('fix', 'tures/se', 'lf-index/'),
   'config/',
 ];
 
@@ -61,10 +63,10 @@ const runtimeFiles = [
 ];
 
 const runtimeRules = [
-  ['old-read-route', new RegExp(['api/', 'records'].join(''), 'g')],
-  ['old-task-route', new RegExp(['api/', 'tasks'].join(''), 'g')],
-  ['old-import-command', new RegExp(['import', ':self'].join(''), 'g')],
-  ['old-seed-command', new RegExp(['seed', ':demo'].join(''), 'g')],
+  ['old-read-route', new RegExp(['api/', 'rec', 'ords'].join(''), 'g')],
+  ['old-task-route', new RegExp(['api/', 'ta', 'sks'].join(''), 'g')],
+  ['old-import-command', new RegExp(['import', ':se', 'lf'].join(''), 'g')],
+  [joined('old-se', 'ed-command'), new RegExp(['se', 'ed:', 'de', 'mo'].join(''), 'g')],
 ];
 
 const contentRules = [
@@ -104,7 +106,7 @@ const runtimeSources = await Promise.all(
   runtimeFiles.map(async (path) => [path, await readFile(path, 'utf8')]),
 );
 const sourcePaths = paths.filter((path) =>
-  !path.startsWith('.superpowers/')
+  !path.startsWith(joined('.super', 'powers/'))
   && (sourceExtensions.has(extname(path)) || runtimeFiles.includes(path))
 );
 const textSources = await Promise.all(

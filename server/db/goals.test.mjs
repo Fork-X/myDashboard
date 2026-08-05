@@ -99,7 +99,7 @@ test('rejects unknown or invalid goal fields without modifying the goal', async 
       { title: ' ' },
       { title: '目标', description: 1 },
       { title: '目标', status: 'unknown' },
-      { title: '目标', source: 'Self' },
+      { title: '目标', source: 'external' },
     ];
     for (const input of invalidCreates) {
       assert.throws(() => createGoal(db, input), /goal|title|description|status|field/i);
@@ -112,7 +112,7 @@ test('rejects unknown or invalid goal fields without modifying the goal', async 
       { title: ' ' },
       { description: 1 },
       { status: 'unknown' },
-      { source: 'Self' },
+      { source: 'external' },
     ];
     for (const patch of invalidPatches) {
       assert.throws(() => updateGoal(db, goal.id, patch), /goal|patch|title|description|status|field/i);

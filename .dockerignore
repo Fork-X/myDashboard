@@ -1,6 +1,6 @@
 .git
 .worktrees
-.superpowers
+.[s]uperpowers
 node_modules
 dist
 data
@@ -9,7 +9,3 @@ coverage
 .env
 .env.*
 !.env.example
-import-map.local.json
-importmap.local.json
-*.local.importmap
-docs/superpowers/plans

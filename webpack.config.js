@@ -43,7 +43,7 @@ module.exports = (env, argv) => {
       extensions: ['.ts', '.tsx', '.js', '.jsx']
     },
     devServer: {
-      port: 3015,
+      port: 3000,
       allowedHosts: 'all',
       proxy: [
         {

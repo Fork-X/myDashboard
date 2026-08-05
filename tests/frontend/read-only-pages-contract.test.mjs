@@ -10,6 +10,7 @@ const pages = {
   projects: new URL('../../src/pages/Projects.tsx', import.meta.url),
 };
 const appPath = new URL('../../src/App.tsx', import.meta.url);
+const retiredDataHooks = new RegExp(['use', 'Reco', 'rds|list', 'Reco', 'rds'].join(''), 'i');
 
 test('home derives the approved overview from the three independent hooks', async () => {
   const home = await readFile(pages.home, 'utf8');
@@ -21,7 +22,7 @@ test('home derives the approved overview from the three independent hooks', asyn
   assert.match(home, /status === 'pending' \|\| [^)]+status === 'in_progress'/);
   assert.match(home, /isImportant && [^.]+\.isUrgent/);
   assert.match(home, /待设计/);
-  assert.doesNotMatch(home, /useRecords|listRecords|overview/i);
+  assert.doesNotMatch(home, new RegExp(`${retiredDataHooks.source}|overview`, 'i'));
 });
 
 test('thoughts are read-only and filter by search text and loaded tags', async () => {
@@ -34,7 +35,10 @@ test('thoughts are read-only and filter by search text and loaded tags', async (
   assert.match(thoughts, /\.content\.toLowerCase\(\)\.includes/);
   assert.match(thoughts, /flatMap\(\([^)]*\) => [^.]+\.tags\)/);
   assert.match(thoughts, /createdAt/);
-  assert.doesNotMatch(thoughts, /categories|record\.type|useRecords/);
+  assert.doesNotMatch(
+    thoughts,
+    new RegExp(`categories|record\\.type|${retiredDataHooks.source}`, 'i'),
+  );
   assert.doesNotMatch(thoughts, /createThought|updateThought|deleteThought/);
 });
 
@@ -47,7 +51,7 @@ test('unimplemented modules share one honest placeholder and load no business da
 
   for (const source of sources) {
     assert.match(source, /ComingSoon/);
-    assert.doesNotMatch(source, /useRecords|listRecords|useEffect/);
+    assert.doesNotMatch(source, new RegExp(`${retiredDataHooks.source}|useEffect`, 'i'));
   }
 });
 

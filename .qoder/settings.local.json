@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote -v && git branch -a && git status --short | head -20)"
+    ]
+  }
+}

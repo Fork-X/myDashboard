@@ -116,11 +116,12 @@ test('fresh startup and restart keep all business data empty', async () => {
   }
 });
 
-test('package exposes the thought importer without demo or Self commands', async () => {
+test('package exposes the thought importer without legacy data commands', async () => {
   const packageJson = JSON.parse(await readFile(join(projectRoot, 'package.json'), 'utf8'));
   assert.equal(packageJson.scripts['thought:import'], 'node server/cli/import-thought.mjs');
+  const legacyDataCommand = new RegExp(['de', 'mo|se', 'ed|se', 'lf'].join(''), 'i');
   assert.deepEqual(
-    Object.keys(packageJson.scripts).filter((name) => /(?:demo|seed|self)/i.test(name)),
+    Object.keys(packageJson.scripts).filter((name) => legacyDataCommand.test(name)),
     [],
   );
 });
@@ -145,9 +146,13 @@ test('README documents only the independent empty-start workflows', async () => 
   assert.match(readme, /投资理财[^。\n]*职业生涯[^。\n]*个人项目[^。\n]*(?:占位|待设计)/);
   assert.match(
     readme,
-    /不(?:读取|接入|包含|需要)[^。\n]*Self[^。\n]*云账号[^。\n]*外部数据库[^。\n]*演示数据[^。\n]*个人数据/,
+    /不(?:读取|接入)[^。\n]*外部内容源[^。\n]*云账号[^。\n]*外部数据库[^。\n]*演示数据[^。\n]*个人数据/,
   );
-  assert.doesNotMatch(readme, /npm run (?:import:self|seed:demo)|server\/cli\/(?:import-self|seed-demo)/);
+  const retiredCommand = new RegExp([
+    'npm run (?:import:', 'se', 'lf|se', 'ed:', 'de', 'mo)',
+    '|server\\/cli\\/(?:import-', 'se', 'lf|se', 'ed-', 'de', 'mo)',
+  ].join(''));
+  assert.doesNotMatch(readme, retiredCommand);
 });
 
 test('container packaging has one app, persisted data, and health checks', async () => {

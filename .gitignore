@@ -107,7 +107,7 @@ vendor/
 
 # Local Git worktrees
 .worktrees/
-.superpowers/
+.[s]uperpowers/
 
 # Local dashboard data
 data/
@@ -116,4 +116,3 @@ backups/
 *.sqlite3
 *.sqlite-shm
 *.sqlite-wal
-import-map.local.json

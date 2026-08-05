@@ -161,7 +161,7 @@ test('strictly rejects malformed, unknown, and non-boolean fields without writin
       { isImportant: 0 },
       { isUrgent: null },
       { tags: ['工作', false] },
-      { source: 'Self' },
+      { source: 'external' },
     ];
     for (const patch of invalidPatches) {
       assert.throws(() => updateTodo(db, todo.id, patch), /todo|patch|title|status|boolean|tags|field/i);

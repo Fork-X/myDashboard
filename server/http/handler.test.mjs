@@ -168,7 +168,7 @@ test('strictly validates goal and progress request bodies without writing', asyn
       { title: ' ' },
       { title: '目标', description: 1 },
       { title: '目标', status: 'unknown' },
-      { title: '目标', source: 'Self' },
+      { title: '目标', source: 'external' },
     ];
     for (const body of invalidCreates) {
       const response = await jsonRequest(`${base}/api/goals`, 'POST', body);
@@ -185,7 +185,7 @@ test('strictly validates goal and progress request bodies without writing', asyn
       { title: ' ' },
       { description: 1 },
       { status: 'unknown' },
-      { source: 'Self' },
+      { source: 'external' },
     ];
     for (const body of invalidPatches) {
       const response = await jsonRequest(`${base}/api/goals/${created.id}`, 'PATCH', body);
@@ -196,7 +196,7 @@ test('strictly validates goal and progress request bodies without writing', asyn
       null,
       [],
       { content: ' ' },
-      { content: '进展', source: 'Self' },
+      { content: '进展', source: 'external' },
     ];
     for (const body of invalidProgress) {
       const response = await jsonRequest(
@@ -353,7 +353,7 @@ test('returns 404 for missing todos and 400 for malformed todo bodies without wr
       { isImportant: 0 },
       { isUrgent: null },
       { tags: '工作' },
-      { source: 'Self' },
+      { source: 'external' },
     ]) {
       const response = await jsonRequest(`${base}/api/todos/${created.data.id}`, 'PATCH', body);
       assert.equal(response.status, 400);
