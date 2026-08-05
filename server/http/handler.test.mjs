@@ -249,6 +249,165 @@ test('strictly validates goal and progress request bodies without writing', asyn
   });
 });
 
+test('serves editable Eisenhower todo CRUD with normalized fields', async () => {
+  await withTestServer(async ({ base }) => {
+    const createResponse = await jsonRequest(`${base}/api/todos`, 'POST', {
+      title: '  本地事项  ',
+      isImportant: true,
+      isUrgent: false,
+      tags: [' 工作 ', '工作', ' ', '学习'],
+    });
+    assert.equal(createResponse.status, 201);
+    const created = (await createResponse.json()).data;
+    assert.equal(created.title, '本地事项');
+    assert.equal(created.status, 'pending');
+    assert.equal(created.isImportant, true);
+    assert.equal(created.isUrgent, false);
+    assert.deepEqual(created.tags, ['工作', '学习']);
+    assert.equal(created.completedAt, null);
+
+    const completeResponse = await jsonRequest(
+      `${base}/api/todos/${created.id}`,
+      'PATCH',
+      {
+        title: '  已完成事项  ',
+        status: 'completed',
+        isImportant: false,
+        isUrgent: true,
+        tags: ['完成'],
+      },
+    );
+    assert.equal(completeResponse.status, 200);
+    const completed = (await completeResponse.json()).data;
+    assert.equal(completed.title, '已完成事项');
+    assert.equal(completed.status, 'completed');
+    assert.equal(completed.isImportant, false);
+    assert.equal(completed.isUrgent, true);
+    assert.deepEqual(completed.tags, ['完成']);
+    assert.equal(Number.isNaN(Date.parse(completed.completedAt)), false);
+
+    const reopenResponse = await jsonRequest(
+      `${base}/api/todos/${created.id}`,
+      'PATCH',
+      { status: 'in_progress' },
+    );
+    assert.equal(reopenResponse.status, 200);
+    assert.equal((await reopenResponse.json()).data.completedAt, null);
+
+    const cancelResponse = await jsonRequest(
+      `${base}/api/todos/${created.id}`,
+      'PATCH',
+      { status: 'cancelled' },
+    );
+    assert.equal(cancelResponse.status, 200);
+    assert.equal((await cancelResponse.json()).data.completedAt, null);
+
+    const older = await jsonRequest(`${base}/api/todos`, 'POST', {
+      title: '另一事项',
+    }).then((response) => response.json());
+    const listResponse = await fetch(`${base}/api/todos`);
+    assert.equal(listResponse.status, 200);
+    const listed = (await listResponse.json()).data;
+    assert.equal(listed.length, 2);
+    assert.equal(listed[0].id, older.data.id);
+
+    const deleteResponse = await fetch(`${base}/api/todos/${created.id}`, { method: 'DELETE' });
+    assert.equal(deleteResponse.status, 200);
+    assert.deepEqual((await deleteResponse.json()).data, {
+      ...completed,
+      status: 'cancelled',
+      completedAt: null,
+    });
+    const remaining = await fetch(`${base}/api/todos`).then((response) => response.json());
+    assert.deepEqual(remaining.data.map(({ id }) => id), [older.data.id]);
+  });
+});
+
+test('deletes only the decoded todo ID and returns the deleted object', async () => {
+  await withTestServer(async ({ base }) => {
+    const response = await fetch(`${base}/api/todos/todo%2Fencoded`, { method: 'DELETE' });
+    assert.equal(response.status, 200);
+    const deleted = (await response.json()).data;
+    assert.equal(deleted.id, 'todo/encoded');
+    assert.equal(deleted.title, '编码 ID');
+
+    const listed = await fetch(`${base}/api/todos`).then((item) => item.json());
+    assert.deepEqual(listed.data.map(({ id }) => id), ['todo%2Fencoded']);
+  }, async (_root, db) => {
+    const createdAt = '2026-08-04T02:00:00.000Z';
+    const insert = db.prepare(`
+      INSERT INTO todos (
+        id, title, status, is_important, is_urgent, tags_json, created_at, completed_at
+      ) VALUES (?, ?, 'pending', 0, 0, '[]', ?, NULL)
+    `);
+    insert.run('todo/encoded', '编码 ID', createdAt);
+    insert.run('todo%2Fencoded', '保留事项', createdAt);
+  });
+});
+
+test('returns 404 for missing todos and 400 for malformed todo bodies without writing', async () => {
+  await withTestServer(async ({ base }) => {
+    for (const [method, path, body] of [
+      ['PATCH', '/api/todos/missing', { status: 'completed' }],
+      ['DELETE', '/api/todos/missing'],
+    ]) {
+      const response = body
+        ? await jsonRequest(`${base}${path}`, method, body)
+        : await fetch(`${base}${path}`, { method });
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        error: { code: 'NOT_FOUND', message: 'TODO 不存在' },
+      });
+    }
+
+    const invalidCreates = [
+      null,
+      [],
+      { title: ' ' },
+      { title: '事项', status: 'unknown' },
+      { title: '事项', isImportant: 1 },
+      { title: '事项', isUrgent: 'false' },
+      { title: '事项', tags: ['工作', 1] },
+      { title: '事项', priority: 'high' },
+    ];
+    for (const body of invalidCreates) {
+      const response = await jsonRequest(`${base}/api/todos`, 'POST', body);
+      assert.equal(response.status, 400);
+    }
+
+    const created = await jsonRequest(`${base}/api/todos`, 'POST', {
+      title: '原事项',
+    }).then((response) => response.json());
+    for (const body of [
+      null,
+      [],
+      {},
+      { title: ' ' },
+      { status: 'unknown' },
+      { isImportant: 0 },
+      { isUrgent: null },
+      { tags: '工作' },
+      { source: 'Self' },
+    ]) {
+      const response = await jsonRequest(`${base}/api/todos/${created.data.id}`, 'PATCH', body);
+      assert.equal(response.status, 400);
+    }
+
+    const invalidJson = await fetch(`${base}/api/todos`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{',
+    });
+    assert.equal(invalidJson.status, 400);
+
+    const listed = await fetch(`${base}/api/todos`).then((response) => response.json());
+    assert.equal(listed.data.length, 1);
+    assert.equal(listed.data[0].id, created.data.id);
+    assert.equal(listed.data[0].title, '原事项');
+    assert.equal(listed.data[0].status, 'pending');
+  });
+});
+
 test('serves health and local todo CRUD', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dashboard-api-'));
   const db = openDatabase(join(root, 'db.sqlite3'));

@@ -10,6 +10,7 @@ import {
 import { getRecord, listRecords } from '../db/records.mjs';
 import { createTask, listTasks, updateTask } from '../db/tasks.mjs';
 import { listThoughts } from '../db/thoughts.mjs';
+import { createTodo, deleteTodo, listTodos, updateTodo } from '../db/todos.mjs';
 import { readJson, sendError, sendJson } from './response.mjs';
 
 const contentTypes = new Map([
@@ -81,6 +82,12 @@ function sendMissingGoal(response) {
   });
 }
 
+function sendMissingTodo(response) {
+  return sendJson(response, 404, {
+    error: { code: 'NOT_FOUND', message: 'TODO 不存在' },
+  });
+}
+
 export function createHandler({ db, publicDir }) {
   const publicRoot = resolve(publicDir);
 
@@ -121,6 +128,22 @@ export function createHandler({ db, publicDir }) {
           body,
         ));
         return item ? sendJson(response, 201, { data: item }) : sendMissingGoal(response);
+      }
+      if (method === 'GET' && pathname === '/api/todos') {
+        return sendJson(response, 200, { data: listTodos(db) });
+      }
+      if (method === 'POST' && pathname === '/api/todos') {
+        const body = await readJson(request);
+        return sendJson(response, 201, { data: invalidBody(() => createTodo(db, body)) });
+      }
+      if (method === 'PATCH' && /^\/api\/todos\/[^/]+$/.test(pathname)) {
+        const body = await readJson(request);
+        const item = invalidBody(() => updateTodo(db, decodeId(pathname), body));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingTodo(response);
+      }
+      if (method === 'DELETE' && /^\/api\/todos\/[^/]+$/.test(pathname)) {
+        const item = deleteTodo(db, decodeId(pathname));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingTodo(response);
       }
       if (method === 'GET' && pathname === '/api/records') {
         return sendJson(response, 200, {
