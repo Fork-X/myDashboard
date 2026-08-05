@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test",
     "db:migrate": "node server/cli/migrate.mjs",
+    "thought:import": "node server/cli/import-thought.mjs",
     "seed:demo": "node server/cli/seed-demo.mjs"
   },
   "dependencies": {

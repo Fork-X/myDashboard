@@ -7,6 +7,7 @@ import test from 'node:test';
 import { openDatabase } from '../db/database.mjs';
 import { applyMigrations } from '../db/migrate.mjs';
 import { upsertRecords } from '../db/records.mjs';
+import { insertThought } from '../db/thoughts.mjs';
 import { createHandler } from './handler.mjs';
 
 async function withTestServer(run, setup = async () => {}) {
@@ -15,7 +16,7 @@ async function withTestServer(run, setup = async () => {}) {
   const server = createServer(createHandler({ db, publicDir: root }));
   try {
     applyMigrations(db, resolve('db/migrations'));
-    await setup(root);
+    await setup(root, db);
     await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
     const { port } = server.address();
     await run({ base: `http://127.0.0.1:${port}`, root });
@@ -79,6 +80,29 @@ test('rejects a null PATCH task body as an invalid request', async () => {
     assert.deepEqual(await response.json(), {
       error: { code: 'INVALID_REQUEST', message: '任务状态无效' },
     });
+  });
+});
+
+test('serves thoughts newest-first through the read-only API shape', async () => {
+  await withTestServer(async ({ base }) => {
+    const response = await fetch(`${base}/api/thoughts`);
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(body.data.map(({ title }) => title), ['较新', '较早']);
+    assert.deepEqual(Object.keys(body.data[0]).sort(), [
+      'content', 'createdAt', 'id', 'tags', 'title',
+    ]);
+
+    for (const method of ['POST', 'PATCH', 'DELETE']) {
+      const writeResponse = await fetch(`${base}/api/thoughts`, { method });
+      assert.equal(writeResponse.status, 404);
+      assert.deepEqual(await writeResponse.json(), {
+        error: { code: 'NOT_FOUND', message: '接口不存在' },
+      });
+    }
+  }, async (_root, db) => {
+    insertThought(db, { title: '较早', content: '第一条' }, new Date('2026-08-03T02:00:00.000Z'));
+    insertThought(db, { title: '较新', content: '第二条', tags: ['明确'] }, new Date('2026-08-04T02:00:00.000Z'));
   });
 });
 

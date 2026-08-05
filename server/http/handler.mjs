@@ -2,6 +2,7 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { getRecord, listRecords } from '../db/records.mjs';
 import { createTask, listTasks, updateTask } from '../db/tasks.mjs';
+import { listThoughts } from '../db/thoughts.mjs';
 import { readJson, sendError, sendJson } from './response.mjs';
 
 const contentTypes = new Map([
@@ -65,6 +66,9 @@ export function createHandler({ db, publicDir }) {
 
       if (method === 'GET' && pathname === '/api/health') {
         return sendJson(response, 200, { data: { status: 'ok' } });
+      }
+      if (method === 'GET' && pathname === '/api/thoughts') {
+        return sendJson(response, 200, { data: listThoughts(db) });
       }
       if (method === 'GET' && pathname === '/api/records') {
         return sendJson(response, 200, {
