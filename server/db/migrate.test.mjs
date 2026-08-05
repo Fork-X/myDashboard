@@ -6,31 +6,23 @@ import test from 'node:test';
 import { openDatabase } from './database.mjs';
 import { applyMigrations } from './migrate.mjs';
 
-test('applies the legacy and independent schemas exactly once', async () => {
+test('applies the independent schema exactly once', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dashboard-db-'));
   const db = openDatabase(join(root, 'dashboard.sqlite3'));
   try {
     const migrationsDir = resolve('db/migrations');
-    assert.deepEqual(applyMigrations(db, migrationsDir), [
-      '001_initial.sql',
-      '002_independent_dashboard.sql',
-    ]);
+    assert.deepEqual(applyMigrations(db, migrationsDir), ['001_initial.sql']);
     assert.deepEqual(applyMigrations(db, migrationsDir), []);
 
     const tables = db.prepare(`
       SELECT name FROM sqlite_master
-      WHERE type = 'table' AND name IN (
-        'records', 'tasks', 'schema_migrations', 'thoughts', 'goals',
-        'goal_progress', 'todos'
-      )
+      WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
       ORDER BY name
     `).all().map(({ name }) => name);
     assert.deepEqual(tables, [
       'goal_progress',
       'goals',
-      'records',
       'schema_migrations',
-      'tasks',
       'thoughts',
       'todos',
     ]);

@@ -7,8 +7,6 @@ import {
   listGoals,
   updateGoal,
 } from '../db/goals.mjs';
-import { getRecord, listRecords } from '../db/records.mjs';
-import { createTask, listTasks, updateTask } from '../db/tasks.mjs';
 import { listThoughts } from '../db/thoughts.mjs';
 import { createTodo, deleteTodo, listTodos, updateTodo } from '../db/todos.mjs';
 import { readJson, sendError, sendJson } from './response.mjs';
@@ -145,48 +143,6 @@ export function createHandler({ db, publicDir }) {
         const item = deleteTodo(db, decodeId(pathname));
         return item ? sendJson(response, 200, { data: item }) : sendMissingTodo(response);
       }
-      if (method === 'GET' && pathname === '/api/records') {
-        return sendJson(response, 200, {
-          data: listRecords(db, {
-            domain: url.searchParams.get('domain') || undefined,
-            type: url.searchParams.get('type') || undefined,
-          }),
-        });
-      }
-      if (method === 'GET' && /^\/api\/records\/[^/]+$/.test(pathname)) {
-        const item = getRecord(db, decodeId(pathname));
-        return item
-          ? sendJson(response, 200, { data: item })
-          : sendJson(response, 404, {
-            error: { code: 'NOT_FOUND', message: '记录不存在' },
-          });
-      }
-      if (method === 'GET' && pathname === '/api/tasks') {
-        return sendJson(response, 200, {
-          data: listTasks(db, { kind: url.searchParams.get('kind') || undefined }),
-        });
-      }
-      if (method === 'POST' && pathname === '/api/tasks') {
-        const body = await readJson(request);
-        if (!body || typeof body.title !== 'string' || !body.title.trim()) {
-          throw Object.assign(new Error('任务标题不能为空'), { status: 400 });
-        }
-        return sendJson(response, 201, { data: createTask(db, body) });
-      }
-      if (method === 'PATCH' && /^\/api\/tasks\/[^/]+$/.test(pathname)) {
-        const body = await readJson(request);
-        const allowed = new Set(['pending', 'in_progress', 'completed', 'cancelled']);
-        if (!body || !allowed.has(body.status)) {
-          throw Object.assign(new Error('任务状态无效'), { status: 400 });
-        }
-        const item = updateTask(db, decodeId(pathname), body);
-        return item
-          ? sendJson(response, 200, { data: item })
-          : sendJson(response, 404, {
-            error: { code: 'NOT_FOUND', message: '任务不存在' },
-          });
-      }
-
       if (pathname === '/api' || pathname.startsWith('/api/')) {
         return sendJson(response, 404, {
           error: { code: 'NOT_FOUND', message: '接口不存在' },

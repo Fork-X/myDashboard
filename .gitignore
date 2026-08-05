@@ -107,6 +107,7 @@ vendor/
 
 # Local Git worktrees
 .worktrees/
+.superpowers/
 
 # Local dashboard data
 data/

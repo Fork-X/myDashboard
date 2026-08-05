@@ -11,6 +11,5 @@ ENV NODE_ENV=production DATA_DIR=/app/data HOST=0.0.0.0 PORT=3015
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 COPY --from=build /app/db ./db
-COPY --from=build /app/fixtures ./fixtures
 EXPOSE 3015
 CMD ["node", "server/index.mjs"]

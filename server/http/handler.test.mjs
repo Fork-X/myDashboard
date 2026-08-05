@@ -6,7 +6,6 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { openDatabase } from '../db/database.mjs';
 import { applyMigrations } from '../db/migrate.mjs';
-import { upsertRecords } from '../db/records.mjs';
 import { insertThought } from '../db/thoughts.mjs';
 import { createHandler } from './handler.mjs';
 
@@ -56,39 +55,6 @@ test('rejects a static symlink that resolves outside publicDir', async () => {
   } finally {
     await rm(outsideRoot, { recursive: true, force: true });
   }
-});
-
-test('rejects a null POST task body as an invalid request', async () => {
-  await withTestServer(async ({ base }) => {
-    const response = await fetch(`${base}/api/tasks`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: 'null',
-    });
-    assert.equal(response.status, 400);
-    assert.deepEqual(await response.json(), {
-      error: { code: 'INVALID_REQUEST', message: '任务标题不能为空' },
-    });
-  });
-});
-
-test('rejects a null PATCH task body as an invalid request', async () => {
-  await withTestServer(async ({ base }) => {
-    const created = await fetch(`${base}/api/tasks`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '本地任务', description: '' }),
-    }).then((response) => response.json());
-    const response = await fetch(`${base}/api/tasks/${created.data.id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: 'null',
-    });
-    assert.equal(response.status, 400);
-    assert.deepEqual(await response.json(), {
-      error: { code: 'INVALID_REQUEST', message: '任务状态无效' },
-    });
-  });
 });
 
 test('serves thoughts newest-first through the read-only API shape', async () => {
@@ -408,18 +374,12 @@ test('returns 404 for missing todos and 400 for malformed todo bodies without wr
   });
 });
 
-test('serves health and local todo CRUD', async () => {
+test('serves health, static files, and rejects unknown API routes', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dashboard-api-'));
   const db = openDatabase(join(root, 'db.sqlite3'));
   applyMigrations(db, resolve('db/migrations'));
   await writeFile(join(root, 'index.html'), '<main>Dashboard shell</main>');
   await writeFile(join(root, 'bundle.js'), 'globalThis.dashboard = true;');
-  upsertRecords(db, [{
-    id: 'record%2Fone',
-    domain: 'thought',
-    type: 'idea',
-    title: '测试记录',
-  }]);
   const server = createServer(createHandler({ db, publicDir: root }));
   await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
   const { port } = server.address();
@@ -429,59 +389,7 @@ test('serves health and local todo CRUD', async () => {
     assert.equal(health.status, 200);
     assert.deepEqual(await health.json(), { data: { status: 'ok' } });
 
-    const records = await fetch(`${base}/api/records?domain=thought&type=idea`)
-      .then((response) => response.json());
-    assert.equal(records.data.length, 1);
-    const record = await fetch(`${base}/api/records/record%252Fone`)
-      .then((response) => response.json());
-    assert.equal(record.data.id, 'record%2Fone');
-    const missingRecord = await fetch(`${base}/api/records/missing`);
-    assert.equal(missingRecord.status, 404);
-    assert.deepEqual(await missingRecord.json(), {
-      error: { code: 'NOT_FOUND', message: '记录不存在' },
-    });
-
-    const createResponse = await fetch(`${base}/api/tasks`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: '本地任务', description: '' }),
-    });
-    assert.equal(createResponse.status, 201);
-    const created = await createResponse.json();
-    assert.equal(created.data.title, '本地任务');
-
-    const patched = await fetch(`${base}/api/tasks/${created.data.id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ status: 'completed' }),
-    }).then((response) => response.json());
-    assert.equal(patched.data.status, 'completed');
-
-    const tasks = await fetch(`${base}/api/tasks?kind=todo`)
-      .then((response) => response.json());
-    assert.equal(tasks.data.length, 1);
-
-    const invalidTitle = await fetch(`${base}/api/tasks`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title: ' ' }),
-    });
-    assert.equal(invalidTitle.status, 400);
-    assert.deepEqual(await invalidTitle.json(), {
-      error: { code: 'INVALID_REQUEST', message: '任务标题不能为空' },
-    });
-
-    const invalidStatus = await fetch(`${base}/api/tasks/${created.data.id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ status: 'unknown' }),
-    });
-    assert.equal(invalidStatus.status, 400);
-    assert.deepEqual(await invalidStatus.json(), {
-      error: { code: 'INVALID_REQUEST', message: '任务状态无效' },
-    });
-
-    const unknownApi = await fetch(`${base}/api/tasks/${created.data.id}`);
+    const unknownApi = await fetch(`${base}/api/unknown`);
     assert.equal(unknownApi.status, 404);
     assert.deepEqual(await unknownApi.json(), {
       error: { code: 'NOT_FOUND', message: '接口不存在' },
