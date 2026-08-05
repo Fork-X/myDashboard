@@ -108,6 +108,7 @@ vendor/
 # Local Git worktrees
 .worktrees/
 .[s]uperpowers/
+.qoder/
 
 # Local dashboard data
 data/
