@@ -4,8 +4,8 @@ import GoalsList from '../components/todos/GoalsList';
 import TodoList from '../components/todos/TodoList';
 
 const tabs = [
-  { path: '', label: '目标规划', icon: Target },
-  { path: 'list', label: 'TODO List', icon: CheckSquare },
+  { path: '', label: '持续目标', icon: Target },
+  { path: 'list', label: 'TODO 四象限', icon: CheckSquare },
 ];
 
 export default function Todos() {

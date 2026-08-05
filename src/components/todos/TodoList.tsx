@@ -1,242 +1,212 @@
-import { useEffect, useRef, useState } from 'react';
-import { format } from 'date-fns';
-import Loading from '../common/Loading';
+import { useState } from 'react';
+import { CheckCircle2, Pencil, Plus, RotateCcw, Trash2, XCircle } from 'lucide-react';
+import type { TodoItem, TodoStatus } from '../../api/types';
+import { useTodos } from '../../hooks/useTodos';
 import EmptyState from '../common/EmptyState';
 import ErrorState from '../common/ErrorState';
-import { CheckSquare, Square, X, Plus } from 'lucide-react';
-import { useTasks } from '../../hooks/useTasks';
+import Loading from '../common/Loading';
+import TodoForm from './TodoForm';
+
+const quadrants = [
+  { key: 'important-urgent', label: '重要且紧急', isImportant: true, isUrgent: true },
+  { key: 'important-not-urgent', label: '重要不紧急', isImportant: true, isUrgent: false },
+  { key: 'not-important-urgent', label: '紧急不重要', isImportant: false, isUrgent: true },
+  { key: 'not-important-not-urgent', label: '不重要不紧急', isImportant: false, isUrgent: false },
+];
+
+const statusLabels: Record<TodoStatus, { label: string; color: string }> = {
+  pending: { label: '待处理', color: 'bg-vintage-brown bg-opacity-20 text-vintage-brown' },
+  in_progress: { label: '进行中', color: 'bg-blue-100 text-blue-700' },
+  completed: { label: '已完成', color: 'bg-vintage-red text-white' },
+  cancelled: { label: '已取消', color: 'bg-gray-400 text-white' },
+};
+
+type QuadrantDefaults = Pick<TodoItem, 'isImportant' | 'isUrgent'>;
 
 export default function TodoList() {
-  const { data: todos, loading, error, add, setStatus } = useTasks('todo');
-  const [newTodoTitle, setNewTodoTitle] = useState('');
-  const [newTodoDescription, setNewTodoDescription] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
+  const { data: todos, loading, error, create, update, remove } = useTodos();
+  const [createDefaults, setCreateDefaults] = useState<QuadrantDefaults | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [mutationBusy, setMutationBusy] = useState(false);
-  const mutationBusyRef = useRef(false);
-  const mounted = useRef(false);
 
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  const beginMutation = () => {
-    if (mutationBusyRef.current) return false;
-    mutationBusyRef.current = true;
-    if (mounted.current) setMutationBusy(true);
-    return true;
-  };
-
-  const finishMutation = () => {
-    mutationBusyRef.current = false;
-    if (mounted.current) setMutationBusy(false);
-  };
-
-  const addTodo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const title = newTodoTitle.trim();
-    if (!title || !beginMutation()) return;
-
+  const runMutation = async (operation: () => Promise<void>, onSuccess: () => void) => {
+    if (mutationBusy) return;
+    setMutationBusy(true);
     try {
-      await add({
-        title,
-        description: newTodoDescription.trim(),
-      });
-      if (mounted.current) {
-        setNewTodoTitle('');
-        setNewTodoDescription('');
-        setShowAddForm(false);
-      }
+      await operation();
+      onSuccess();
     } catch {
-      // useTasks exposes the failure through its error state.
+      // useTodos keeps the API error visible below.
     } finally {
-      finishMutation();
+      setMutationBusy(false);
     }
   };
 
-  const updateTodoStatus = async (
-    id: string,
-    status: 'pending' | 'completed' | 'cancelled',
-  ) => {
-    if (!beginMutation()) return;
-    try {
-      await setStatus(id, status);
-    } catch {
-      // useTasks exposes the failure through its error state.
-    } finally {
-      finishMutation();
-    }
+  const setTodoStatus = (todo: TodoItem, status: TodoStatus) => {
+    void runMutation(() => update(todo.id, { status }), () => undefined);
+  };
+
+  const deleteTodo = (todo: TodoItem) => {
+    if (!window.confirm('确认删除这条 TODO？')) return;
+    void runMutation(() => remove(todo.id), () => undefined);
   };
 
   if (loading && todos.length === 0) return <Loading />;
 
-  const pendingTodos = todos.filter(
-    (todo) => todo.status === 'pending' || todo.status === 'in_progress',
-  );
-  const completedTodos = todos.filter((t) => t.status === 'completed');
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-sm vintage-number">
-          <span>待完成: {pendingTodos.length}</span>
-          <span>已完成: {completedTodos.length}</span>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-vintage-brown">按重要性与紧急性管理 TODO。</p>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          type="button"
+          onClick={() => setCreateDefaults({ isImportant: false, isUrgent: false })}
           disabled={mutationBusy}
-          className="flex items-center gap-2 px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold"
+          className="flex items-center gap-2 rounded bg-vintage-red px-4 py-2 font-bold text-white transition-colors hover:bg-vintage-dark disabled:opacity-50"
         >
-          <Plus size={18} />
-          <span>添加待办</span>
+          <Plus size={18} /> 新建 TODO
         </button>
       </div>
 
-      {showAddForm && (
-        <form onSubmit={addTodo} className="vintage-card p-4">
-          <input
-            type="text"
-            value={newTodoTitle}
-            onChange={(e) => setNewTodoTitle(e.target.value)}
-            placeholder="待办标题"
-            className="w-full px-4 py-2 border-2 border-dashed border-vintage-border rounded mb-3 bg-white focus:outline-none focus:border-vintage-red"
-            autoFocus
-            disabled={mutationBusy}
-          />
-          <textarea
-            value={newTodoDescription}
-            onChange={(e) => setNewTodoDescription(e.target.value)}
-            placeholder="描述（可选）"
-            rows={3}
-            disabled={mutationBusy}
-            className="w-full px-4 py-2 border-2 border-dashed border-vintage-border rounded mb-3 bg-white focus:outline-none focus:border-vintage-red"
-          />
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={mutationBusy || !newTodoTitle.trim()}
-              className="px-4 py-2 bg-vintage-red text-white rounded hover:bg-vintage-dark transition-colors font-bold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {mutationBusy ? '保存中...' : '添加'}
-            </button>
-            <button
-              type="button"
-              disabled={mutationBusy}
-              onClick={() => {
-                setShowAddForm(false);
-                setNewTodoTitle('');
-                setNewTodoDescription('');
-              }}
-              className="px-4 py-2 bg-white text-vintage-dark rounded hover:bg-gray-100 transition-colors border-2 border-dashed border-vintage-border"
-            >
-              取消
-            </button>
-          </div>
-        </form>
+      {createDefaults && (
+        <TodoForm
+          defaults={createDefaults}
+          busy={mutationBusy}
+          submitLabel="创建 TODO"
+          onSubmit={(input) => runMutation(() => create(input), () => setCreateDefaults(null))}
+          onCancel={() => setCreateDefaults(null)}
+        />
       )}
 
       {error && <ErrorState message={error} />}
 
-      {todos.length === 0 && !error ? (
+      {todos.length === 0 && !createDefaults && !error ? (
         <EmptyState
-          icon={<CheckSquare size={64} />}
-          title="暂无待办事项"
-          description="点击上方按钮添加您的第一个待办"
+          icon={<CheckCircle2 size={64} />}
+          title="暂无 TODO"
+          description="新增事项后，它会出现在对应象限"
         />
       ) : (
-        <div className="space-y-6">
-          {pendingTodos.length > 0 && (
-            <div>
-              <h3 className="text-lg font-bold text-vintage-dark mb-3 flex items-center gap-2">
-                <span>待完成</span>
-                <div className="vintage-divider flex-1"></div>
-              </h3>
-              <div className="space-y-2">
-                {pendingTodos.map((todo, index) => (
-                  <div
-                    key={todo.id}
-                    className="vintage-card p-4 flex items-start gap-3"
-                  >
-                    <span className="vintage-number text-xs mt-1">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <button
-                      onClick={() => updateTodoStatus(todo.id, 'completed')}
-                      disabled={mutationBusy}
-                      aria-label={`完成待办：${todo.title}`}
-                      className="flex-shrink-0 mt-1 text-vintage-brown hover:text-vintage-red transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Square size={20} />
-                    </button>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-vintage-dark">{todo.title}</h4>
-                      {todo.description && (
-                        <p className="text-sm text-vintage-brown mt-1">{todo.description}</p>
-                      )}
-                      <p className="text-xs vintage-number mt-2">
-                        {format(new Date(todo.createdAt), 'yyyy.MM.dd HH:mm')}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => updateTodoStatus(todo.id, 'cancelled')}
-                      disabled={mutationBusy}
-                      aria-label={`取消待办：${todo.title}`}
-                      className="flex-shrink-0 text-vintage-brown hover:text-vintage-red transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <X size={20} />
-                    </button>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          {quadrants.map((quadrant) => {
+            const items = todos.filter(
+              (todo) => todo.isImportant === quadrant.isImportant && todo.isUrgent === quadrant.isUrgent,
+            );
+            return (
+              <section key={quadrant.key} className="vintage-card rounded-lg p-5">
+                <div className="mb-4 flex items-center justify-between gap-3 border-b-2 border-dashed border-vintage-border pb-3">
+                  <div>
+                    <h3 className="font-bold text-vintage-dark">{quadrant.label}</h3>
+                    <span className="vintage-number text-xs text-vintage-brown">{items.length} 项</span>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  <button
+                    type="button"
+                    onClick={() => setCreateDefaults({
+                      isImportant: quadrant.isImportant,
+                      isUrgent: quadrant.isUrgent,
+                    })}
+                    disabled={mutationBusy}
+                    aria-label={`在${quadrant.label}中新建 TODO`}
+                    className="rounded border border-vintage-border p-2 text-vintage-dark hover:bg-white disabled:opacity-50"
+                  >
+                    <Plus size={17} />
+                  </button>
+                </div>
 
-          {completedTodos.length > 0 && (
-            <div>
-              <h3 className="text-lg font-bold text-vintage-dark mb-3 flex items-center gap-2">
-                <span>已完成</span>
-                <div className="vintage-divider flex-1"></div>
-              </h3>
-              <div className="space-y-2">
-                {completedTodos.map((todo, index) => (
-                  <div
-                    key={todo.id}
-                    className="vintage-card p-4 flex items-start gap-3 relative overflow-hidden"
-                  >
-                    <div className="absolute top-4 right-4 vintage-seal opacity-80 pointer-events-none">
-                      <div className="w-16 h-16 rounded-full border-4 border-vintage-red flex items-center justify-center transform rotate-12">
-                        <span className="text-vintage-red font-bold text-xs">已完成</span>
-                      </div>
-                    </div>
-                    <span className="vintage-number text-xs mt-1">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <button
-                      onClick={() => updateTodoStatus(todo.id, 'pending')}
-                      disabled={mutationBusy}
-                      aria-label={`重新打开待办：${todo.title}`}
-                      className="flex-shrink-0 mt-1 text-vintage-red hover:text-vintage-brown transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <CheckSquare size={20} />
-                    </button>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-vintage-dark line-through opacity-60">{todo.title}</h4>
-                      {todo.description && (
-                        <p className="text-sm text-vintage-brown mt-1 line-through opacity-60">{todo.description}</p>
-                      )}
-                      <p className="text-xs vintage-number mt-2 opacity-60">
-                        {todo.completedAt
-                          ? `完成于 ${format(new Date(todo.completedAt), 'yyyy.MM.dd HH:mm')}`
-                          : '已完成'}
-                      </p>
-                    </div>
+                {items.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-vintage-brown">此象限暂无事项</p>
+                ) : (
+                  <div className="space-y-3">
+                    {items.map((todo) => (
+                      <article key={todo.id} className="rounded border border-dashed border-vintage-border bg-white bg-opacity-70 p-3">
+                        {editingId === todo.id ? (
+                          <TodoForm
+                            todo={todo}
+                            busy={mutationBusy}
+                            submitLabel="保存修改"
+                            onSubmit={(patch) => runMutation(
+                              () => update(todo.id, patch),
+                              () => setEditingId(null),
+                            )}
+                            onCancel={() => setEditingId(null)}
+                          />
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between gap-3">
+                              <h4 className={`font-bold text-vintage-dark ${todo.status === 'completed' ? 'line-through opacity-60' : ''}`}>
+                                {todo.title}
+                              </h4>
+                              <span className={`whitespace-nowrap rounded px-2 py-1 text-xs font-bold ${statusLabels[todo.status].color}`}>
+                                {statusLabels[todo.status].label}
+                              </span>
+                            </div>
+
+                            {todo.tags.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {todo.tags.map((tag) => (
+                                  <span key={tag} className="rounded border border-vintage-border px-2 py-0.5 text-xs text-vintage-brown">
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {todo.status !== 'completed' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTodoStatus(todo, 'completed')}
+                                  disabled={mutationBusy}
+                                  className="flex items-center gap-1 rounded border border-vintage-border px-2 py-1 text-xs text-vintage-dark hover:bg-white disabled:opacity-50"
+                                >
+                                  <CheckCircle2 size={14} /> 完成
+                                </button>
+                              )}
+                              {todo.status !== 'pending' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTodoStatus(todo, 'pending')}
+                                  disabled={mutationBusy}
+                                  className="flex items-center gap-1 rounded border border-vintage-border px-2 py-1 text-xs text-vintage-dark hover:bg-white disabled:opacity-50"
+                                >
+                                  <RotateCcw size={14} /> 重新打开
+                                </button>
+                              )}
+                              {todo.status !== 'cancelled' && todo.status !== 'completed' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTodoStatus(todo, 'cancelled')}
+                                  disabled={mutationBusy}
+                                  className="flex items-center gap-1 rounded border border-vintage-border px-2 py-1 text-xs text-vintage-dark hover:bg-white disabled:opacity-50"
+                                >
+                                  <XCircle size={14} /> 取消
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setEditingId(todo.id)}
+                                disabled={mutationBusy}
+                                className="flex items-center gap-1 rounded border border-vintage-border px-2 py-1 text-xs text-vintage-dark hover:bg-white disabled:opacity-50"
+                              >
+                                <Pencil size={14} /> 编辑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteTodo(todo)}
+                                disabled={mutationBusy}
+                                className="flex items-center gap-1 rounded border border-vintage-red px-2 py-1 text-xs text-vintage-red hover:bg-red-50 disabled:opacity-50"
+                              >
+                                <Trash2 size={14} /> 删除
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </article>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
