@@ -1,5 +1,12 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
+import {
+  appendGoalProgress,
+  createGoal,
+  deleteGoal,
+  listGoals,
+  updateGoal,
+} from '../db/goals.mjs';
 import { getRecord, listRecords } from '../db/records.mjs';
 import { createTask, listTasks, updateTask } from '../db/tasks.mjs';
 import { listThoughts } from '../db/thoughts.mjs';
@@ -48,11 +55,30 @@ async function sendFile(response, filename) {
 }
 
 function decodeId(pathname) {
+  return decodePathSegment(pathname.split('/').at(-1));
+}
+
+function decodePathSegment(segment) {
   try {
-    return decodeURIComponent(pathname.split('/').at(-1));
+    return decodeURIComponent(segment);
   } catch {
     throw Object.assign(new Error('请求路径无效'), { status: 400 });
   }
+}
+
+function invalidBody(operation) {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof TypeError) error.status = 400;
+    throw error;
+  }
+}
+
+function sendMissingGoal(response) {
+  return sendJson(response, 404, {
+    error: { code: 'NOT_FOUND', message: '目标不存在' },
+  });
 }
 
 export function createHandler({ db, publicDir }) {
@@ -69,6 +95,32 @@ export function createHandler({ db, publicDir }) {
       }
       if (method === 'GET' && pathname === '/api/thoughts') {
         return sendJson(response, 200, { data: listThoughts(db) });
+      }
+      if (method === 'GET' && pathname === '/api/goals') {
+        return sendJson(response, 200, { data: listGoals(db) });
+      }
+      if (method === 'POST' && pathname === '/api/goals') {
+        const body = await readJson(request);
+        return sendJson(response, 201, { data: invalidBody(() => createGoal(db, body)) });
+      }
+      if (method === 'PATCH' && /^\/api\/goals\/[^/]+$/.test(pathname)) {
+        const body = await readJson(request);
+        const item = invalidBody(() => updateGoal(db, decodeId(pathname), body));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingGoal(response);
+      }
+      if (method === 'DELETE' && /^\/api\/goals\/[^/]+$/.test(pathname)) {
+        const item = deleteGoal(db, decodeId(pathname));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingGoal(response);
+      }
+      const progressMatch = pathname.match(/^\/api\/goals\/([^/]+)\/progress$/);
+      if (method === 'POST' && progressMatch) {
+        const body = await readJson(request);
+        const item = invalidBody(() => appendGoalProgress(
+          db,
+          decodePathSegment(progressMatch[1]),
+          body,
+        ));
+        return item ? sendJson(response, 201, { data: item }) : sendMissingGoal(response);
       }
       if (method === 'GET' && pathname === '/api/records') {
         return sendJson(response, 200, {

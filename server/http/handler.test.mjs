@@ -29,6 +29,14 @@ async function withTestServer(run, setup = async () => {}) {
   }
 }
 
+async function jsonRequest(url, method, body) {
+  return fetch(url, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 test('rejects a static symlink that resolves outside publicDir', async () => {
   const outsideRoot = await mkdtemp(join(tmpdir(), 'dashboard-outside-'));
   try {
@@ -103,6 +111,141 @@ test('serves thoughts newest-first through the read-only API shape', async () =>
   }, async (_root, db) => {
     insertThought(db, { title: '较早', content: '第一条' }, new Date('2026-08-03T02:00:00.000Z'));
     insertThought(db, { title: '较新', content: '第二条', tags: ['明确'] }, new Date('2026-08-04T02:00:00.000Z'));
+  });
+});
+
+test('serves continuous goal CRUD and append-only progress', async () => {
+  await withTestServer(async ({ base }) => {
+    const createResponse = await jsonRequest(`${base}/api/goals`, 'POST', {
+      title: '  持续目标  ',
+      description: '  说明  ',
+    });
+    assert.equal(createResponse.status, 201);
+    const created = (await createResponse.json()).data;
+    assert.equal(created.title, '持续目标');
+    assert.equal(created.description, '说明');
+    assert.equal(created.status, 'active');
+    assert.deepEqual(created.progress, []);
+
+    const patchResponse = await jsonRequest(`${base}/api/goals/${created.id}`, 'PATCH', {
+      title: '更新后的目标',
+      status: 'paused',
+    });
+    assert.equal(patchResponse.status, 200);
+    const patched = (await patchResponse.json()).data;
+    assert.equal(patched.title, '更新后的目标');
+    assert.equal(patched.description, '说明');
+    assert.equal(patched.status, 'paused');
+
+    const progressResponse = await jsonRequest(
+      `${base}/api/goals/${created.id}/progress`,
+      'POST',
+      { content: '  第一条进展  ' },
+    );
+    assert.equal(progressResponse.status, 201);
+    const progress = (await progressResponse.json()).data;
+    assert.equal(progress.goalId, created.id);
+    assert.equal(progress.content, '第一条进展');
+
+    const listResponse = await fetch(`${base}/api/goals`);
+    assert.equal(listResponse.status, 200);
+    const listed = (await listResponse.json()).data;
+    assert.equal(listed.length, 1);
+    assert.deepEqual(listed[0].progress, [progress]);
+
+    const conflictResponse = await fetch(`${base}/api/goals/${created.id}`, { method: 'DELETE' });
+    assert.equal(conflictResponse.status, 409);
+    assert.deepEqual(await conflictResponse.json(), {
+      error: { code: 'INVALID_REQUEST', message: '已有进展的目标不能删除' },
+    });
+
+    const deletable = (await jsonRequest(`${base}/api/goals`, 'POST', {
+      title: '无进展目标',
+    }).then((response) => response.json())).data;
+    const deleteResponse = await fetch(`${base}/api/goals/${deletable.id}`, { method: 'DELETE' });
+    assert.equal(deleteResponse.status, 200);
+    assert.deepEqual((await deleteResponse.json()).data, deletable);
+  });
+});
+
+test('returns 404 for missing goals and exposes no progress mutation routes', async () => {
+  await withTestServer(async ({ base }) => {
+    for (const [method, path, body] of [
+      ['PATCH', '/api/goals/missing', { status: 'paused' }],
+      ['DELETE', '/api/goals/missing'],
+      ['POST', '/api/goals/missing/progress', { content: '进展' }],
+    ]) {
+      const response = body
+        ? await jsonRequest(`${base}${path}`, method, body)
+        : await fetch(`${base}${path}`, { method });
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        error: { code: 'NOT_FOUND', message: '目标不存在' },
+      });
+    }
+
+    for (const method of ['PATCH', 'DELETE']) {
+      const response = await fetch(`${base}/api/goals/goal-id/progress`, { method });
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        error: { code: 'NOT_FOUND', message: '接口不存在' },
+      });
+    }
+  });
+});
+
+test('strictly validates goal and progress request bodies without writing', async () => {
+  await withTestServer(async ({ base }) => {
+    const invalidCreates = [
+      null,
+      [],
+      { title: ' ' },
+      { title: '目标', description: 1 },
+      { title: '目标', status: 'unknown' },
+      { title: '目标', source: 'Self' },
+    ];
+    for (const body of invalidCreates) {
+      const response = await jsonRequest(`${base}/api/goals`, 'POST', body);
+      assert.equal(response.status, 400);
+    }
+
+    const created = (await jsonRequest(`${base}/api/goals`, 'POST', {
+      title: '原目标',
+    }).then((response) => response.json())).data;
+    const invalidPatches = [
+      null,
+      [],
+      {},
+      { title: ' ' },
+      { description: 1 },
+      { status: 'unknown' },
+      { source: 'Self' },
+    ];
+    for (const body of invalidPatches) {
+      const response = await jsonRequest(`${base}/api/goals/${created.id}`, 'PATCH', body);
+      assert.equal(response.status, 400);
+    }
+
+    const invalidProgress = [
+      null,
+      [],
+      { content: ' ' },
+      { content: '进展', source: 'Self' },
+    ];
+    for (const body of invalidProgress) {
+      const response = await jsonRequest(
+        `${base}/api/goals/${created.id}/progress`,
+        'POST',
+        body,
+      );
+      assert.equal(response.status, 400);
+    }
+
+    const listed = await fetch(`${base}/api/goals`).then((response) => response.json());
+    assert.equal(listed.data.length, 1);
+    assert.equal(listed.data[0].title, '原目标');
+    assert.equal(listed.data[0].status, 'active');
+    assert.deepEqual(listed.data[0].progress, []);
   });
 });
 
