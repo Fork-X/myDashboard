@@ -75,7 +75,7 @@ export async function run(argv, { stdout = console.log } = {}) {
 
   const db = openDatabase(resolve(process.env.DATA_DIR ?? 'data', 'dashboard.sqlite3'));
   try {
-    applyMigrations(db, resolve('db/migrations'));
+    applyMigrations(db, resolve('server/db/migrations'));
     const result = applyThought(db, thought);
     const output = {
       mode: 'apply',

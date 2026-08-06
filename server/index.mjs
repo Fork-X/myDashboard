@@ -7,7 +7,7 @@ import { createHandler } from './http/handler.mjs';
 function startDashboard() {
   const dataDir = resolve(process.env.DATA_DIR ?? 'data');
   const db = openDatabase(resolve(dataDir, 'dashboard.sqlite3'));
-  applyMigrations(db, resolve('db/migrations'));
+  applyMigrations(db, resolve('server/db/migrations'));
 
   const port = Number.parseInt(process.env.PORT ?? '3015', 10);
   const host = process.env.HOST ?? '127.0.0.1';

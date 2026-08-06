@@ -80,7 +80,7 @@ test('rolls back apply when the thought insert fails', async () => {
   const dbFilename = join(dataDir, 'dashboard.sqlite3');
   try {
     const db = openDatabase(dbFilename);
-    applyMigrations(db, resolve('db/migrations'));
+    applyMigrations(db, resolve('server/db/migrations'));
     db.exec(`
       CREATE TRIGGER reject_imported_thought
       AFTER INSERT ON thoughts

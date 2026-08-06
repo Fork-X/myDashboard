@@ -7,7 +7,7 @@ import test from 'node:test';
 const joined = (...parts) => parts.join('');
 
 const removedFiles = [
-  'db/migrations/002_independent_dashboard.sql',
+  'server/db/migrations/002_independent_dashboard.sql',
   joined('server/db/rec', 'ords.mjs'),
   joined('server/db/rec', 'ords.test.mjs'),
   joined('server/db/ta', 'sks.mjs'),
