@@ -36,6 +36,10 @@ module.exports = (env, argv) => {
         {
           test: /\.css$/,
           use: ['style-loader', 'css-loader', 'postcss-loader']
+        },
+        {
+          test: /\.png$/,
+          type: 'asset/inline'
         }
       ]
     },

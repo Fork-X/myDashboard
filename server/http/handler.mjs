@@ -7,7 +7,12 @@ import {
   listGoals,
   updateGoal,
 } from '../db/goals.mjs';
-import { listThoughts } from '../db/thoughts.mjs';
+import {
+  createConversation,
+  deleteConversation,
+  getConversation,
+} from '../db/conversations.mjs';
+import { insertThought, listThoughts } from '../db/thoughts.mjs';
 import { createTodo, deleteTodo, listTodos, updateTodo } from '../db/todos.mjs';
 import { readJson, sendError, sendJson } from './response.mjs';
 
@@ -86,7 +91,48 @@ function sendMissingTodo(response) {
   });
 }
 
-export function createHandler({ db, publicDir }) {
+function sendMissingConversation(response) {
+  return sendJson(response, 404, {
+    error: { code: 'NOT_FOUND', message: '对话不存在' },
+  });
+}
+
+function sendChatDisabled(response) {
+  return sendJson(response, 503, {
+    error: { code: 'CHAT_DISABLED', message: '对话功能未启用' },
+  });
+}
+
+function readMessageBody(request) {
+  return readJson(request).then((body) => {
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || typeof body.content !== 'string' || !body.content.trim()) {
+      throw Object.assign(new Error('消息内容无效'), { status: 400 });
+    }
+    return body.content;
+  });
+}
+
+function streamChat(request, response, chatManager, conversationId) {
+  response.writeHead(200, {
+    'content-type': 'text/event-stream; charset=utf-8',
+    'cache-control': 'no-cache, no-transform',
+    connection: 'keep-alive',
+  });
+  response.write(': connected\n\n');
+  const unsubscribe = chatManager.subscribe(conversationId, (event) => {
+    response.write(`data: ${JSON.stringify(event)}\n\n`);
+  });
+  const heartbeat = setInterval(() => response.write(': ping\n\n'), 25000);
+  request.on('close', () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  });
+}
+
+export function createHandler({
+  db, publicDir, chatManager = null, distiller = null,
+}) {
   const publicRoot = resolve(publicDir);
 
   return async function handler(request, response) {
@@ -100,6 +146,11 @@ export function createHandler({ db, publicDir }) {
       }
       if (method === 'GET' && pathname === '/api/thoughts') {
         return sendJson(response, 200, { data: listThoughts(db) });
+      }
+      if (method === 'POST' && pathname === '/api/thoughts') {
+        const body = await readJson(request);
+        const { thought, inserted } = invalidBody(() => insertThought(db, body));
+        return sendJson(response, inserted ? 201 : 200, { data: thought });
       }
       if (method === 'GET' && pathname === '/api/goals') {
         return sendJson(response, 200, { data: listGoals(db) });
@@ -142,6 +193,55 @@ export function createHandler({ db, publicDir }) {
       if (method === 'DELETE' && /^\/api\/todos\/[^/]+$/.test(pathname)) {
         const item = deleteTodo(db, decodeId(pathname));
         return item ? sendJson(response, 200, { data: item }) : sendMissingTodo(response);
+      }
+      if (method === 'GET' && pathname === '/api/chats') {
+        if (!chatManager) return sendChatDisabled(response);
+        return sendJson(response, 200, { data: chatManager.list() });
+      }
+      if (method === 'POST' && pathname === '/api/chats') {
+        if (!chatManager) return sendChatDisabled(response);
+        return sendJson(response, 201, { data: createConversation(db) });
+      }
+      const chatMatch = pathname.match(/^\/api\/chats\/([^/]+)$/);
+      if (method === 'GET' && chatMatch) {
+        if (!chatManager) return sendChatDisabled(response);
+        const detail = getConversation(db, decodePathSegment(chatMatch[1]));
+        return detail ? sendJson(response, 200, { data: detail }) : sendMissingConversation(response);
+      }
+      if (method === 'DELETE' && chatMatch) {
+        if (!chatManager) return sendChatDisabled(response);
+        const item = deleteConversation(db, decodePathSegment(chatMatch[1]));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingConversation(response);
+      }
+      const messagesMatch = pathname.match(/^\/api\/chats\/([^/]+)\/messages$/);
+      if (method === 'POST' && messagesMatch) {
+        if (!chatManager) return sendChatDisabled(response);
+        const conversationId = decodePathSegment(messagesMatch[1]);
+        const content = await readMessageBody(request);
+        const message = await chatManager.send(conversationId, content);
+        return message
+          ? sendJson(response, 201, { data: message })
+          : sendMissingConversation(response);
+      }
+      const streamMatch = pathname.match(/^\/api\/chats\/([^/]+)\/stream$/);
+      if (method === 'GET' && streamMatch) {
+        if (!chatManager) return sendChatDisabled(response);
+        const conversationId = decodePathSegment(streamMatch[1]);
+        if (!getConversation(db, conversationId)) return sendMissingConversation(response);
+        return streamChat(request, response, chatManager, conversationId);
+      }
+      const distillMatch = pathname.match(/^\/api\/chats\/([^/]+)\/distill$/);
+      if (method === 'POST' && distillMatch) {
+        if (!chatManager || !distiller) return sendChatDisabled(response);
+        const body = await readJson(request);
+        if (body.focus !== undefined && typeof body.focus !== 'string') {
+          throw Object.assign(new Error('关注角度无效'), { status: 400 });
+        }
+        const draft = await distiller.distill(
+          decodePathSegment(distillMatch[1]),
+          body.focus ?? '',
+        );
+        return draft ? sendJson(response, 200, { data: draft }) : sendMissingConversation(response);
       }
       if (pathname === '/api' || pathname.startsWith('/api/')) {
         return sendJson(response, 404, {

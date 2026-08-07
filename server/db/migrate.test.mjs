@@ -11,7 +11,10 @@ test('applies the independent schema exactly once', async () => {
   const db = openDatabase(join(root, 'dashboard.sqlite3'));
   try {
     const migrationsDir = resolve('server/db/migrations');
-    assert.deepEqual(applyMigrations(db, migrationsDir), ['001_initial.sql']);
+    assert.deepEqual(
+      applyMigrations(db, migrationsDir),
+      ['001_initial.sql', '002_conversations.sql'],
+    );
     assert.deepEqual(applyMigrations(db, migrationsDir), []);
 
     const tables = db.prepare(`
@@ -20,8 +23,10 @@ test('applies the independent schema exactly once', async () => {
       ORDER BY name
     `).all().map(({ name }) => name);
     assert.deepEqual(tables, [
+      'conversations',
       'goal_progress',
       'goals',
+      'messages',
       'schema_migrations',
       'thoughts',
       'todos',
@@ -41,6 +46,12 @@ test('applies the independent schema exactly once', async () => {
     assert.deepEqual(columnsFor('todos'), [
       'id', 'title', 'status', 'is_important', 'is_urgent',
       'tags_json', 'created_at', 'completed_at',
+    ]);
+    assert.deepEqual(columnsFor('conversations'), [
+      'id', 'title', 'created_at', 'updated_at',
+    ]);
+    assert.deepEqual(columnsFor('messages'), [
+      'id', 'conversation_id', 'role', 'content', 'thinking', 'created_at',
     ]);
 
     assert.throws(() => db.prepare(`
@@ -84,6 +95,29 @@ test('applies the independent schema exactly once', async () => {
     assert.throws(() => db.prepare(`
       DELETE FROM goals WHERE id = 'goal-1'
     `).run(), /FOREIGN KEY constraint failed/);
+
+    assert.throws(() => db.prepare(`
+      INSERT INTO messages(id, conversation_id, role, content, created_at)
+      VALUES ('bad-role', 'missing', 'robot', 'hi', '2026-08-04T00:00:00.000Z')
+    `).run(), /CHECK constraint failed/);
+
+    db.prepare(`
+      INSERT INTO conversations(id, title, created_at, updated_at)
+      VALUES ('conv-1', '', '2026-08-04T00:00:00.000Z', '2026-08-04T00:00:00.000Z')
+    `).run();
+    db.prepare(`
+      INSERT INTO messages(id, conversation_id, role, content, created_at)
+      VALUES ('msg-1', 'conv-1', 'user', 'hello', '2026-08-04T00:00:00.000Z')
+    `).run();
+    assert.throws(() => db.prepare(`
+      UPDATE messages SET content = 'changed' WHERE id = 'msg-1'
+    `).run(), /messages are immutable/);
+    db.prepare('DELETE FROM conversations WHERE id = ?').run('conv-1');
+    assert.equal(
+      db.prepare('SELECT COUNT(*) AS count FROM messages WHERE conversation_id = ?')
+        .get('conv-1').count,
+      0,
+    );
   } finally {
     db.close();
     await rm(root, { recursive: true, force: true });
