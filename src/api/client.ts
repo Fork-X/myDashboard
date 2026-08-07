@@ -1,4 +1,8 @@
 import type {
+  ChatMessage,
+  ConversationDetail,
+  ConversationSummary,
+  DistillDraft,
   GoalItem,
   GoalProgressItem,
   GoalStatus,
@@ -132,6 +136,124 @@ export function deleteTodo(id: string): Promise<TodoItem> {
   return request<unknown>(`/api/todos/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   }).then(parseTodo);
+}
+
+export function listConversations(): Promise<ConversationSummary[]> {
+  return request<unknown>('/api/chats').then(parseConversationList);
+}
+
+export function createConversation(): Promise<ConversationSummary> {
+  return request<unknown>('/api/chats', { method: 'POST', body: '{}' })
+    .then(parseConversation);
+}
+
+export function getConversation(id: string): Promise<ConversationDetail> {
+  return request<unknown>(`/api/chats/${encodeURIComponent(id)}`).then(parseConversationDetail);
+}
+
+export function deleteConversation(id: string): Promise<ConversationSummary> {
+  return request<unknown>(`/api/chats/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  }).then(parseConversation);
+}
+
+export function sendChatMessage(id: string, content: string): Promise<ChatMessage> {
+  return request<unknown>(`/api/chats/${encodeURIComponent(id)}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  }).then(parseChatMessage);
+}
+
+export function createThought(input: {
+  title: string;
+  content: string;
+  tags?: string[];
+}): Promise<ThoughtItem> {
+  return request<unknown>('/api/thoughts', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }).then(parseThought);
+}
+
+export function distillConversation(id: string, focus?: string): Promise<DistillDraft> {
+  return request<unknown>(`/api/chats/${encodeURIComponent(id)}/distill`, {
+    method: 'POST',
+    body: JSON.stringify(focus ? { focus } : {}),
+  }).then(parseDistillDraft);
+}
+
+function parseDistillDraft(value: unknown): DistillDraft {
+  if (!isObject(value) || typeof value.shouldSave !== 'boolean') invalidData();
+  if (!value.shouldSave) {
+    if (typeof value.reason !== 'string') invalidData();
+    return { shouldSave: false, reason: value.reason };
+  }
+  if (
+    typeof value.title !== 'string'
+    || typeof value.content !== 'string'
+    || !isStringArray(value.tags)
+  ) {
+    invalidData();
+  }
+  return {
+    shouldSave: true,
+    title: value.title,
+    content: value.content,
+    tags: [...value.tags],
+  };
+}
+
+function parseConversationList(value: unknown): ConversationSummary[] {
+  if (!Array.isArray(value)) invalidData();
+  return value.map(parseConversation);
+}
+
+function parseConversation(value: unknown): ConversationSummary {
+  if (
+    !isObject(value)
+    || typeof value.id !== 'string'
+    || typeof value.title !== 'string'
+    || !isTimestamp(value.createdAt)
+    || !isTimestamp(value.updatedAt)
+    || typeof value.messageCount !== 'number'
+  ) {
+    invalidData();
+  }
+  return {
+    id: value.id,
+    title: value.title,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+    messageCount: value.messageCount,
+  };
+}
+
+function parseConversationDetail(value: unknown): ConversationDetail {
+  const summary = parseConversation(value);
+  if (!isObject(value) || !Array.isArray(value.messages)) invalidData();
+  return { ...summary, messages: value.messages.map(parseChatMessage) };
+}
+
+function parseChatMessage(value: unknown): ChatMessage {
+  if (
+    !isObject(value)
+    || typeof value.id !== 'string'
+    || typeof value.conversationId !== 'string'
+    || (value.role !== 'user' && value.role !== 'assistant')
+    || typeof value.content !== 'string'
+    || !(value.thinking === null || typeof value.thinking === 'string')
+    || !isTimestamp(value.createdAt)
+  ) {
+    invalidData();
+  }
+  return {
+    id: value.id,
+    conversationId: value.conversationId,
+    role: value.role,
+    content: value.content,
+    thinking: value.thinking,
+    createdAt: value.createdAt,
+  };
 }
 
 function parseThoughtList(value: unknown): ThoughtItem[] {

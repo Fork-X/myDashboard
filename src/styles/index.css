@@ -62,20 +62,19 @@ body {
   letter-spacing: 2px;
 }
 
-.vintage-barcode {
-  background: repeating-linear-gradient(
-    90deg,
-    #3E3E3E 0px,
-    #3E3E3E 2px,
-    transparent 2px,
-    transparent 4px,
-    #3E3E3E 4px,
-    #3E3E3E 5px,
-    transparent 5px,
-    transparent 8px
-  );
-  height: 40px;
-  opacity: 0.6;
+@keyframes bell-ring {
+  0% { transform: rotate(0deg); }
+  12% { transform: rotate(20deg); }
+  32% { transform: rotate(-15deg); }
+  52% { transform: rotate(10deg); }
+  72% { transform: rotate(-6deg); }
+  88% { transform: rotate(3deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.bell-ring {
+  transform-origin: 50% 0%;
+  animation: bell-ring 0.7s ease-in-out;
 }
 
 .vintage-divider {

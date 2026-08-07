@@ -6,6 +6,7 @@ import Thoughts from './pages/Thoughts';
 import Career from './pages/Career';
 import Todos from './pages/Todos';
 import Projects from './pages/Projects';
+import Chat from './pages/Chat';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="career" element={<Career />} />
           <Route path="todos/*" element={<Todos />} />
           <Route path="projects" element={<Projects />} />
+          <Route path="chats" element={<Chat />} />
         </Route>
       </Routes>
     </HashRouter>

@@ -4,21 +4,32 @@ import { createServer, request as createRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import {
+  appendMessage,
+  createConversation,
+  getConversation,
+  listConversations,
+} from '../db/conversations.mjs';
 import { openDatabase } from '../db/database.mjs';
 import { applyMigrations } from '../db/migrate.mjs';
 import { insertThought } from '../db/thoughts.mjs';
 import { createHandler } from './handler.mjs';
 
-async function withTestServer(run, setup = async () => {}) {
+async function withTestServer(run, setup = async () => {}, { chat, distill } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'dashboard-api-'));
   const db = openDatabase(join(root, 'db.sqlite3'));
-  const server = createServer(createHandler({ db, publicDir: root }));
+  const server = createServer(createHandler({
+    db,
+    publicDir: root,
+    ...(chat ? { chatManager: chat(db) } : {}),
+    ...(distill ? { distiller: distill(db) } : {}),
+  }));
   try {
     applyMigrations(db, resolve('server/db/migrations'));
     await setup(root, db);
     await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
     const { port } = server.address();
-    await run({ base: `http://127.0.0.1:${port}`, root });
+    await run({ base: `http://127.0.0.1:${port}`, root, db });
   } finally {
     if (server.listening) {
       await new Promise((resolveClose) => server.close(resolveClose));
@@ -57,7 +68,7 @@ test('rejects a static symlink that resolves outside publicDir', async () => {
   }
 });
 
-test('serves thoughts newest-first through the read-only API shape', async () => {
+test('serves thoughts newest-first and rejects thought mutation methods other than POST', async () => {
   await withTestServer(async ({ base }) => {
     const response = await fetch(`${base}/api/thoughts`);
     assert.equal(response.status, 200);
@@ -67,7 +78,7 @@ test('serves thoughts newest-first through the read-only API shape', async () =>
       'content', 'createdAt', 'id', 'tags', 'title',
     ]);
 
-    for (const method of ['POST', 'PATCH', 'DELETE']) {
+    for (const method of ['PATCH', 'DELETE']) {
       const writeResponse = await fetch(`${base}/api/thoughts`, { method });
       assert.equal(writeResponse.status, 404);
       assert.deepEqual(await writeResponse.json(), {
@@ -77,6 +88,36 @@ test('serves thoughts newest-first through the read-only API shape', async () =>
   }, async (_root, db) => {
     insertThought(db, { title: '较早', content: '第一条' }, new Date('2026-08-03T02:00:00.000Z'));
     insertThought(db, { title: '较新', content: '第二条', tags: ['明确'] }, new Date('2026-08-04T02:00:00.000Z'));
+  });
+});
+
+test('creates thoughts through POST /api/thoughts with normalization and idempotency', async () => {
+  await withTestServer(async ({ base }) => {
+    const createResponse = await jsonRequest(`${base}/api/thoughts`, 'POST', {
+      title: '  沉淀标题  ',
+      content: '  沉淀正文  ',
+      tags: [' 决策 ', '决策', ' '],
+    });
+    assert.equal(createResponse.status, 201);
+    const created = (await createResponse.json()).data;
+    assert.equal(created.title, '沉淀标题');
+    assert.equal(created.content, '沉淀正文');
+    assert.deepEqual(created.tags, ['决策']);
+
+    const duplicateResponse = await jsonRequest(`${base}/api/thoughts`, 'POST', {
+      title: '沉淀标题',
+      content: '沉淀正文',
+    });
+    assert.equal(duplicateResponse.status, 200);
+    assert.equal((await duplicateResponse.json()).data.id, created.id);
+
+    for (const body of [null, [], { title: ' ', content: '正文' }, { title: '标题', content: '正文', source: 'x' }]) {
+      const response = await jsonRequest(`${base}/api/thoughts`, 'POST', body);
+      assert.equal(response.status, 400);
+    }
+
+    const listed = await fetch(`${base}/api/thoughts`).then((response) => response.json());
+    assert.equal(listed.data.length, 1);
   });
 });
 
@@ -420,4 +461,181 @@ test('serves health, static files, and rejects unknown API routes', async () => 
     db.close();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+function fakeChatManager(db) {
+  const listeners = new Map();
+  return {
+    list: () => listConversations(db),
+    get: (id) => getConversation(db, id),
+    send: async (id, content) => {
+      const message = appendMessage(db, id, { role: 'user', content });
+      if (message) {
+        for (const listener of listeners.get(id) ?? []) {
+          listener({ type: 'message', message });
+        }
+      }
+      return message;
+    },
+    subscribe: (id, listener) => {
+      const bucket = listeners.get(id) ?? new Set();
+      bucket.add(listener);
+      listeners.set(id, bucket);
+      listener({ type: 'status', active: true, busy: false });
+      return () => bucket.delete(listener);
+    },
+  };
+}
+
+test('serves chat conversation CRUD and message sending', async () => {
+  await withTestServer(async ({ base }) => {
+    const createResponse = await fetch(`${base}/api/chats`, { method: 'POST' });
+    assert.equal(createResponse.status, 201);
+    const conversation = (await createResponse.json()).data;
+    assert.equal(conversation.title, '');
+    assert.equal(conversation.messageCount, 0);
+
+    const messageResponse = await jsonRequest(
+      `${base}/api/chats/${conversation.id}/messages`,
+      'POST',
+      { content: '  第一条消息  ' },
+    );
+    assert.equal(messageResponse.status, 201);
+    const message = (await messageResponse.json()).data;
+    assert.equal(message.role, 'user');
+    assert.equal(message.content, '第一条消息');
+
+    const detailResponse = await fetch(`${base}/api/chats/${conversation.id}`);
+    assert.equal(detailResponse.status, 200);
+    const detail = (await detailResponse.json()).data;
+    assert.equal(detail.title, '第一条消息');
+    assert.equal(detail.messages.length, 1);
+
+    const listResponse = await fetch(`${base}/api/chats`);
+    assert.deepEqual((await listResponse.json()).data.map(({ id }) => id), [conversation.id]);
+
+    const badMessage = await jsonRequest(
+      `${base}/api/chats/${conversation.id}/messages`,
+      'POST',
+      { content: '  ' },
+    );
+    assert.equal(badMessage.status, 400);
+
+    const missingMessage = await jsonRequest(
+      `${base}/api/chats/missing/messages`,
+      'POST',
+      { content: 'hi' },
+    );
+    assert.equal(missingMessage.status, 404);
+
+    const deleteResponse = await fetch(`${base}/api/chats/${conversation.id}`, { method: 'DELETE' });
+    assert.equal(deleteResponse.status, 200);
+    assert.equal((await fetch(`${base}/api/chats/${conversation.id}`)).status, 404);
+  }, async () => {}, { chat: fakeChatManager });
+});
+
+test('streams chat events over SSE until the client disconnects', async () => {
+  await withTestServer(async ({ base, db }) => {
+    const conversation = createConversation(db);
+    const response = await fetch(`${base}/api/chats/${conversation.id}/stream`);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /text\/event-stream/);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let received = '';
+    const readUntil = async (marker) => {
+      while (!received.includes(marker)) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += decoder.decode(value, { stream: true });
+      }
+    };
+
+    await readUntil('status');
+    appendMessage(db, conversation.id, { role: 'user', content: '触发' });
+    await fetch(`${base}/api/chats/${conversation.id}/messages`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ content: '触发' }),
+    });
+    await readUntil('触发');
+    assert.match(received, /data: \{"type":"message"/);
+
+    await reader.cancel();
+  }, async () => {}, { chat: fakeChatManager });
+});
+
+test('returns 404 for streaming a missing conversation and 503 when chat is disabled', async () => {
+  await withTestServer(async ({ base, db }) => {
+    const missing = await fetch(`${base}/api/chats/missing/stream`);
+    assert.equal(missing.status, 404);
+  }, async () => {}, { chat: fakeChatManager });
+
+  await withTestServer(async ({ base }) => {
+    for (const [method, path] of [
+      ['GET', '/api/chats'],
+      ['POST', '/api/chats'],
+      ['GET', '/api/chats/any'],
+      ['DELETE', '/api/chats/any'],
+      ['POST', '/api/chats/any/messages'],
+      ['GET', '/api/chats/any/stream'],
+      ['POST', '/api/chats/any/distill'],
+    ]) {
+      const response = method === 'GET'
+        ? await fetch(`${base}${path}`)
+        : await jsonRequest(`${base}${path}`, method, { content: 'hi' });
+      assert.equal(response.status, 503, `${method} ${path}`);
+      assert.equal((await response.json()).error.code, 'CHAT_DISABLED');
+    }
+  });
+});
+
+function fakeDistiller(db) {
+  return {
+    distill: async (id, focus) => {
+      if (!getConversation(db, id)) return null;
+      return {
+        shouldSave: true,
+        title: '草稿标题',
+        content: `草稿正文（关注：${focus || '无'}）`,
+        tags: ['决策'],
+      };
+    },
+  };
+}
+
+test('serves distill drafts with focus validation and missing-conversation 404', async () => {
+  await withTestServer(async ({ base, db }) => {
+    const conversation = createConversation(db);
+    appendMessage(db, conversation.id, { role: 'user', content: '聊几句' });
+
+    const draftResponse = await jsonRequest(
+      `${base}/api/chats/${conversation.id}/distill`,
+      'POST',
+      { focus: '决策' },
+    );
+    assert.equal(draftResponse.status, 200);
+    assert.deepEqual(await draftResponse.json(), {
+      data: {
+        shouldSave: true,
+        title: '草稿标题',
+        content: '草稿正文（关注：决策）',
+        tags: ['决策'],
+      },
+    });
+
+    const badFocus = await jsonRequest(
+      `${base}/api/chats/${conversation.id}/distill`,
+      'POST',
+      { focus: 1 },
+    );
+    assert.equal(badFocus.status, 400);
+
+    const missing = await jsonRequest(`${base}/api/chats/missing/distill`, 'POST', {});
+    assert.equal(missing.status, 404);
+    assert.deepEqual(await missing.json(), {
+      error: { code: 'NOT_FOUND', message: '对话不存在' },
+    });
+  }, async () => {}, { chat: fakeChatManager, distill: fakeDistiller });
 });

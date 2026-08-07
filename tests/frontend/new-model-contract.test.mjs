@@ -46,7 +46,29 @@ const todo = {
   completedAt: null,
 };
 
-test('declares the exact independent model and read-only thought contract', async () => {
+const conversation = {
+  id: 'chat/one',
+  title: '对话',
+  createdAt,
+  updatedAt,
+  messageCount: 1,
+};
+const message = {
+  id: 'msg/one',
+  conversationId: 'chat/one',
+  role: 'user',
+  content: '你好',
+  thinking: null,
+  createdAt,
+};
+const draft = {
+  shouldSave: true,
+  title: '标题',
+  content: '正文',
+  tags: ['决策'],
+};
+
+test('declares the exact independent model and append-only thought contract', async () => {
   const [clientSource, typesSource, thoughtHook, goalHook, todoHook] = await Promise.all([
     readFile(clientPath, 'utf8'),
     readFile(typesPath, 'utf8'),
@@ -61,7 +83,8 @@ test('declares the exact independent model and read-only thought contract', asyn
     assert.match(typesSource, new RegExp(`export interface ${name}\\b`));
   }
 
-  assert.doesNotMatch(clientSource, /createThought|updateThought|deleteThought/);
+  assert.match(clientSource, /export function createThought/);
+  assert.doesNotMatch(clientSource, /updateThought|deleteThought/);
   assert.match(clientSource, /export function listThoughts/);
   assert.match(clientSource, /export function appendGoalProgress/);
   assert.match(clientSource, /export function deleteTodo/);
@@ -117,6 +140,49 @@ test('uses the exact Task 2-4 routes, methods, bodies, and encoded IDs', async (
   ]);
 });
 
+test('uses the exact chat, distill, and thought-creation routes and bodies', async () => {
+  const detail = { ...conversation, messages: [message] };
+  const emptyDraft = { shouldSave: false, reason: '没有精华' };
+  const responses = [
+    [conversation],
+    conversation,
+    detail,
+    conversation,
+    message,
+    thought,
+    draft,
+    emptyDraft,
+  ];
+  const { client, calls } = await loadClient(responses.map(ok));
+
+  assert.deepEqual(await client.listConversations(), [conversation]);
+  assert.deepEqual(await client.createConversation(), conversation);
+  assert.deepEqual(await client.getConversation('chat/one'), detail);
+  assert.deepEqual(await client.deleteConversation('chat/one'), conversation);
+  assert.deepEqual(await client.sendChatMessage('chat/one', '你好'), message);
+  assert.deepEqual(
+    await client.createThought({ title: thought.title, content: thought.content, tags: thought.tags }),
+    thought,
+  );
+  assert.deepEqual(await client.distillConversation('chat/one', '决策'), draft);
+  assert.deepEqual(await client.distillConversation('chat/one'), emptyDraft);
+
+  assert.deepEqual(calls, [
+    ['/api/chats', {}],
+    ['/api/chats', jsonInit('POST', {})],
+    ['/api/chats/chat%2Fone', {}],
+    ['/api/chats/chat%2Fone', { method: 'DELETE' }],
+    ['/api/chats/chat%2Fone/messages', jsonInit('POST', { content: '你好' })],
+    ['/api/thoughts', jsonInit('POST', {
+      title: thought.title,
+      content: thought.content,
+      tags: thought.tags,
+    })],
+    ['/api/chats/chat%2Fone/distill', jsonInit('POST', { focus: '决策' })],
+    ['/api/chats/chat%2Fone/distill', jsonInit('POST', {})],
+  ]);
+});
+
 test('strictly rejects invalid statuses, booleans, tags, and dates', async () => {
   const invalidCases = [
     ['listThoughts', [{ ...thought, tags: ['明确', 1] }]],
@@ -130,6 +196,13 @@ test('strictly rejects invalid statuses, booleans, tags, and dates', async () =>
     ['listTodos', [{ ...todo, tags: ['工作', null] }]],
     ['listTodos', [{ ...todo, createdAt: 'not-a-date' }]],
     ['listTodos', [{ ...todo, completedAt: 'not-a-date' }]],
+    ['listConversations', [{ ...conversation, messageCount: '1' }]],
+    ['listConversations', [{ ...conversation, updatedAt: 'not-a-date' }]],
+    ['sendChatMessage', [{ ...message, role: 'system' }]],
+    ['sendChatMessage', [{ ...message, thinking: 1 }]],
+    ['distillConversation', [{ shouldSave: 'yes' }]],
+    ['distillConversation', [{ ...draft, tags: undefined }]],
+    ['distillConversation', [{ shouldSave: false }]],
   ];
 
   for (const [method, data] of invalidCases) {
