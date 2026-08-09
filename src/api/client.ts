@@ -2,10 +2,14 @@ import type {
   ChatMessage,
   ConversationDetail,
   ConversationSummary,
+  DirectionItem,
   DistillDraft,
+  EventItem,
   GoalItem,
   GoalProgressItem,
   GoalStatus,
+  InboxItem,
+  TickerItem,
   ThoughtItem,
   TodoItem,
   TodoStatus,
@@ -181,6 +185,177 @@ export function distillConversation(id: string, focus?: string): Promise<Distill
     body: JSON.stringify(focus ? { focus } : {}),
   }).then(parseDistillDraft);
 }
+
+// ── investment: events ──────────────────────────────────────────────────────
+
+export function listEvents(): Promise<EventItem[]> {
+  return request<unknown>('/api/events').then(parseEventList);
+}
+
+export function createEvent(input: {
+  name: string;
+  eventStartDate: string;
+  eventEndDate: string;
+  dateConfidence?: string;
+  ambushDays?: number;
+  tags?: string[];
+  tickerIds?: string[];
+  notes?: string;
+}): Promise<EventItem> {
+  return request<unknown>('/api/events', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }).then(parseEvent);
+}
+
+export function getEvent(id: string): Promise<EventItem> {
+  return request<unknown>(`/api/events/${encodeURIComponent(id)}`).then(parseEvent);
+}
+
+export function updateEvent(
+  id: string,
+  patch: Partial<{
+    name: string;
+    eventStartDate: string;
+    eventEndDate: string;
+    dateConfidence: string;
+    ambushDays: number;
+    tags: string[];
+    tickerIds: string[];
+    notes: string;
+    status: string;
+  }>,
+): Promise<EventItem> {
+  return request<unknown>(`/api/events/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  }).then(parseEvent);
+}
+
+export function deleteEvent(id: string): Promise<EventItem> {
+  return request<unknown>(`/api/events/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  }).then(parseEvent);
+}
+
+// ── investment: tickers ─────────────────────────────────────────────────────
+
+export function listTickers(): Promise<TickerItem[]> {
+  return request<unknown>('/api/tickers').then(parseTickerList);
+}
+
+export function createTicker(input: {
+  symbol: string;
+  name: string;
+  market?: string;
+  notes?: string;
+}): Promise<TickerItem> {
+  return request<unknown>('/api/tickers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }).then(parseTicker);
+}
+
+export function deleteTicker(id: string): Promise<TickerItem> {
+  return request<unknown>(`/api/tickers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  }).then(parseTicker);
+}
+
+// ── investment: directions ──────────────────────────────────────────────────
+
+export function listDirections(): Promise<DirectionItem[]> {
+  return request<unknown>('/api/directions').then(parseDirectionList);
+}
+
+export function createDirection(input: {
+  name: string;
+  description?: string;
+  keywords?: string;
+  enabled?: boolean;
+  priority?: number;
+  scanIntervalHours?: number;
+}): Promise<DirectionItem> {
+  return request<unknown>('/api/directions', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }).then(parseDirection);
+}
+
+export function updateDirection(
+  id: string,
+  patch: Partial<{
+    name: string;
+    description: string;
+    keywords: string;
+    enabled: boolean;
+    priority: number;
+    scanIntervalHours: number;
+  }>,
+): Promise<DirectionItem> {
+  return request<unknown>(`/api/directions/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  }).then(parseDirection);
+}
+
+export function deleteDirection(id: string): Promise<DirectionItem> {
+  return request<unknown>(`/api/directions/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  }).then(parseDirection);
+}
+
+export function scanDirection(id: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/api/directions/${encodeURIComponent(id)}/scan`, {
+    method: 'POST',
+  });
+}
+
+// ── investment: inbox ───────────────────────────────────────────────────────
+
+export function listInboxItems(): Promise<InboxItem[]> {
+  return request<unknown>('/api/inbox').then(parseInboxList);
+}
+
+export function updateInboxItem(
+  id: string,
+  patch: {
+    aiEventName?: string;
+    aiEventStartDate?: string;
+    aiEventEndDate?: string;
+    dateConfidence?: string;
+    aiTags?: string[];
+    aiTickers?: { symbol: string; name: string }[];
+  },
+): Promise<InboxItem> {
+  return request<unknown>(`/api/inbox/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  }).then(parseInbox);
+}
+
+export function convertInboxItem(id: string): Promise<{ item: InboxItem; event: EventItem }> {
+  return request<unknown>(`/api/inbox/${encodeURIComponent(id)}/convert`, {
+    method: 'POST',
+  }).then(parseConvertResult);
+}
+
+export function ignoreInboxItem(id: string): Promise<InboxItem> {
+  return request<unknown>(`/api/inbox/${encodeURIComponent(id)}/ignore`, {
+    method: 'POST',
+  }).then(parseInbox);
+}
+
+// ── investment: tags ────────────────────────────────────────────────────────
+
+export function listTags(): Promise<string[]> {
+  return request<unknown>('/api/tags').then((value) => {
+    if (!Array.isArray(value) || !value.every((v) => typeof v === 'string')) invalidData();
+    return value as string[];
+  });
+}
+
+// ── parsers ─────────────────────────────────────────────────────────────────
 
 function parseDistillDraft(value: unknown): DistillDraft {
   if (!isObject(value) || typeof value.shouldSave !== 'boolean') invalidData();
@@ -394,6 +569,155 @@ function errorMessageOf(payload: unknown) {
 
 function invalidData(): never {
   throw new ApiError(INVALID_DATA_MESSAGE);
+}
+
+// ── investment parsers ──────────────────────────────────────────────────────
+
+function parseEventList(value: unknown): EventItem[] {
+  if (!Array.isArray(value)) invalidData();
+  return value.map(parseEvent);
+}
+
+function parseEvent(value: unknown): EventItem {
+  if (
+    !isObject(value)
+    || typeof value.id !== 'string'
+    || typeof value.name !== 'string'
+    || typeof value.eventStartDate !== 'string'
+    || typeof value.eventEndDate !== 'string'
+    || (value.dateConfidence !== 'exact' && value.dateConfidence !== 'fuzzy')
+    || typeof value.ambushDays !== 'number'
+    || !isStringArray(value.tags)
+    || !Array.isArray(value.tickerIds)
+    || typeof value.notes !== 'string'
+    || (value.status !== 'active' && value.status !== 'archived')
+    || !isTimestamp(value.createdAt)
+    || !isTimestamp(value.updatedAt)
+  ) {
+    invalidData();
+  }
+  return {
+    id: value.id,
+    name: value.name,
+    eventStartDate: value.eventStartDate,
+    eventEndDate: value.eventEndDate,
+    dateConfidence: value.dateConfidence,
+    ambushDays: value.ambushDays,
+    tags: [...value.tags],
+    tickerIds: [...value.tickerIds],
+    notes: value.notes,
+    status: value.status,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
+function parseTickerList(value: unknown): TickerItem[] {
+  if (!Array.isArray(value)) invalidData();
+  return value.map(parseTicker);
+}
+
+function parseTicker(value: unknown): TickerItem {
+  if (
+    !isObject(value)
+    || typeof value.id !== 'string'
+    || typeof value.symbol !== 'string'
+    || typeof value.name !== 'string'
+    || typeof value.market !== 'string'
+    || typeof value.notes !== 'string'
+    || !isTimestamp(value.createdAt)
+  ) {
+    invalidData();
+  }
+  return {
+    id: value.id,
+    symbol: value.symbol,
+    name: value.name,
+    market: value.market,
+    notes: value.notes,
+    createdAt: value.createdAt,
+  };
+}
+
+function parseDirectionList(value: unknown): DirectionItem[] {
+  if (!Array.isArray(value)) invalidData();
+  return value.map(parseDirection);
+}
+
+function parseDirection(value: unknown): DirectionItem {
+  if (
+    !isObject(value)
+    || typeof value.id !== 'string'
+    || typeof value.name !== 'string'
+    || typeof value.description !== 'string'
+    || typeof value.keywords !== 'string'
+    || typeof value.enabled !== 'boolean'
+    || typeof value.priority !== 'number'
+    || typeof value.scanIntervalHours !== 'number'
+    || !isNullableTimestamp(value.lastScannedAt)
+    || !isTimestamp(value.createdAt)
+  ) {
+    invalidData();
+  }
+  return {
+    id: value.id,
+    name: value.name,
+    description: value.description,
+    keywords: value.keywords,
+    enabled: value.enabled,
+    priority: value.priority,
+    scanIntervalHours: value.scanIntervalHours,
+    lastScannedAt: value.lastScannedAt,
+    createdAt: value.createdAt,
+  };
+}
+
+function parseInboxList(value: unknown): InboxItem[] {
+  if (!Array.isArray(value)) invalidData();
+  return value.map(parseInbox);
+}
+
+function parseInbox(value: unknown): InboxItem {
+  if (
+    !isObject(value)
+    || typeof value.id !== 'string'
+    || (value.directionId !== null && typeof value.directionId !== 'string')
+    || typeof value.sourceSummary !== 'string'
+    || typeof value.sourceUrl !== 'string'
+    || typeof value.aiEventName !== 'string'
+    || typeof value.aiEventStartDate !== 'string'
+    || typeof value.aiEventEndDate !== 'string'
+    || (value.dateConfidence !== 'exact' && value.dateConfidence !== 'fuzzy')
+    || !isStringArray(value.aiTags)
+    || !Array.isArray(value.aiTickers)
+    || (value.status !== 'pending' && value.status !== 'converted' && value.status !== 'ignored')
+    || (value.convertedEventId !== null && typeof value.convertedEventId !== 'string')
+    || !isTimestamp(value.scannedAt)
+    || !isTimestamp(value.createdAt)
+  ) {
+    invalidData();
+  }
+  return {
+    id: value.id,
+    directionId: value.directionId,
+    sourceSummary: value.sourceSummary,
+    sourceUrl: value.sourceUrl,
+    aiEventName: value.aiEventName,
+    aiEventStartDate: value.aiEventStartDate,
+    aiEventEndDate: value.aiEventEndDate,
+    dateConfidence: value.dateConfidence,
+    aiTags: [...value.aiTags],
+    aiTickers: [...value.aiTickers],
+    status: value.status,
+    convertedEventId: value.convertedEventId,
+    scannedAt: value.scannedAt,
+    createdAt: value.createdAt,
+  };
+}
+
+function parseConvertResult(value: unknown): { item: InboxItem; event: EventItem } {
+  if (!isObject(value) || !value.item || !value.event) invalidData();
+  return { item: parseInbox(value.item), event: parseEvent(value.event) };
 }
 
 export { request };

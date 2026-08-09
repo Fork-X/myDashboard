@@ -14,6 +14,25 @@ import {
 } from '../db/conversations.mjs';
 import { insertThought, listThoughts } from '../db/thoughts.mjs';
 import { createTodo, deleteTodo, listTodos, updateTodo } from '../db/todos.mjs';
+import {
+  convertInboxItem,
+  createDirection,
+  createEvent,
+  createInboxItem,
+  createTicker,
+  deleteDirection,
+  deleteEvent,
+  deleteTicker,
+  ignoreInboxItem,
+  listAllTags,
+  listDirections,
+  listEvents,
+  listInboxItems,
+  listTickers,
+  updateDirection,
+  updateEvent,
+  updateInboxItem,
+} from '../db/investment.mjs';
 import { readJson, sendError, sendJson } from './response.mjs';
 
 const contentTypes = new Map([
@@ -97,6 +116,30 @@ function sendMissingConversation(response) {
   });
 }
 
+function sendMissingEvent(response) {
+  return sendJson(response, 404, {
+    error: { code: 'NOT_FOUND', message: '事件不存在' },
+  });
+}
+
+function sendMissingTicker(response) {
+  return sendJson(response, 404, {
+    error: { code: 'NOT_FOUND', message: '标的不存在' },
+  });
+}
+
+function sendMissingDirection(response) {
+  return sendJson(response, 404, {
+    error: { code: 'NOT_FOUND', message: '题材不存在' },
+  });
+}
+
+function sendMissingInboxItem(response) {
+  return sendJson(response, 404, {
+    error: { code: 'NOT_FOUND', message: '收件箱条目不存在' },
+  });
+}
+
 function sendChatDisabled(response) {
   return sendJson(response, 503, {
     error: { code: 'CHAT_DISABLED', message: '对话功能未启用' },
@@ -131,7 +174,7 @@ function streamChat(request, response, chatManager, conversationId) {
 }
 
 export function createHandler({
-  db, publicDir, chatManager = null, distiller = null,
+  db, publicDir, chatManager = null, distiller = null, scanner = null,
 }) {
   const publicRoot = resolve(publicDir);
 
@@ -242,6 +285,96 @@ export function createHandler({
           body.focus ?? '',
         );
         return draft ? sendJson(response, 200, { data: draft }) : sendMissingConversation(response);
+      }
+      if (method === 'GET' && pathname === '/api/events') {
+        return sendJson(response, 200, { data: listEvents(db) });
+      }
+      if (method === 'POST' && pathname === '/api/events') {
+        const body = await readJson(request);
+        return sendJson(response, 201, { data: invalidBody(() => createEvent(db, body)) });
+      }
+      const eventMatch = pathname.match(/^\/api\/events\/([^/]+)$/);
+      if (method === 'GET' && eventMatch) {
+        const event = listEvents(db).find((e) => e.id === decodePathSegment(eventMatch[1]));
+        return event ? sendJson(response, 200, { data: event }) : sendMissingEvent(response);
+      }
+      if (method === 'PATCH' && eventMatch) {
+        const body = await readJson(request);
+        const item = invalidBody(() => updateEvent(db, decodePathSegment(eventMatch[1]), body));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingEvent(response);
+      }
+      if (method === 'DELETE' && eventMatch) {
+        const item = deleteEvent(db, decodePathSegment(eventMatch[1]));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingEvent(response);
+      }
+      if (method === 'GET' && pathname === '/api/tickers') {
+        return sendJson(response, 200, { data: listTickers(db) });
+      }
+      if (method === 'POST' && pathname === '/api/tickers') {
+        const body = await readJson(request);
+        return sendJson(response, 201, { data: invalidBody(() => createTicker(db, body)) });
+      }
+      const tickerMatch = pathname.match(/^\/api\/tickers\/([^/]+)$/);
+      if (method === 'DELETE' && tickerMatch) {
+        const item = deleteTicker(db, decodePathSegment(tickerMatch[1]));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingTicker(response);
+      }
+      if (method === 'GET' && pathname === '/api/directions') {
+        return sendJson(response, 200, { data: listDirections(db) });
+      }
+      if (method === 'POST' && pathname === '/api/directions') {
+        const body = await readJson(request);
+        return sendJson(response, 201, { data: invalidBody(() => createDirection(db, body)) });
+      }
+      const directionMatch = pathname.match(/^\/api\/directions\/([^/]+)$/);
+      if (method === 'PATCH' && directionMatch) {
+        const body = await readJson(request);
+        const item = invalidBody(() => updateDirection(db, decodePathSegment(directionMatch[1]), body));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingDirection(response);
+      }
+      if (method === 'DELETE' && directionMatch) {
+        const item = deleteDirection(db, decodePathSegment(directionMatch[1]));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingDirection(response);
+      }
+      const scanMatch = pathname.match(/^\/api\/directions\/([^/]+)\/scan$/);
+      if (method === 'POST' && scanMatch) {
+        if (!scanner) return sendJson(response, 503, {
+          error: { code: 'SCAN_DISABLED', message: '扫描功能未启用' },
+        });
+        try {
+          const result = await scanner.scanDirection(decodePathSegment(scanMatch[1]));
+          return sendJson(response, 200, { data: result });
+        } catch (error) {
+          return sendJson(response, error.status || 500, {
+            error: { code: 'SCAN_FAILED', message: error.message },
+          });
+        }
+      }
+      if (method === 'GET' && pathname === '/api/inbox') {
+        return sendJson(response, 200, { data: listInboxItems(db) });
+      }
+      if (method === 'POST' && pathname === '/api/inbox') {
+        const body = await readJson(request);
+        return sendJson(response, 201, { data: invalidBody(() => createInboxItem(db, body)) });
+      }
+      const inboxMatch = pathname.match(/^\/api\/inbox\/([^/]+)$/);
+      if (method === 'PATCH' && inboxMatch) {
+        const body = await readJson(request);
+        const item = invalidBody(() => updateInboxItem(db, decodePathSegment(inboxMatch[1]), body));
+        return item ? sendJson(response, 200, { data: item }) : sendMissingInboxItem(response);
+      }
+      const convertMatch = pathname.match(/^\/api\/inbox\/([^/]+)\/convert$/);
+      if (method === 'POST' && convertMatch) {
+        const result = invalidBody(() => convertInboxItem(db, decodePathSegment(convertMatch[1])));
+        return result ? sendJson(response, 200, { data: result }) : sendMissingInboxItem(response);
+      }
+      const ignoreMatch = pathname.match(/^\/api\/inbox\/([^/]+)\/ignore$/);
+      if (method === 'POST' && ignoreMatch) {
+        const result = invalidBody(() => ignoreInboxItem(db, decodePathSegment(ignoreMatch[1])));
+        return result ? sendJson(response, 200, { data: result }) : sendMissingInboxItem(response);
+      }
+      if (method === 'GET' && pathname === '/api/tags') {
+        return sendJson(response, 200, { data: listAllTags(db) });
       }
       if (pathname === '/api' || pathname.startsWith('/api/')) {
         return sendJson(response, 404, {

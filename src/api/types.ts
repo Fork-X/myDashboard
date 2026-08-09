@@ -72,3 +72,62 @@ export type ChatStreamEvent =
 export type DistillDraft =
   | { shouldSave: true; title: string; content: string; tags: string[] }
   | { shouldSave: false; reason: string };
+
+// ── investment ──────────────────────────────────────────────────────────────
+
+export type DateConfidence = 'exact' | 'fuzzy';
+export type EventStatus = 'active' | 'archived';
+export type InboxStatus = 'pending' | 'converted' | 'ignored';
+
+export interface TickerItem {
+  id: string;
+  symbol: string;
+  name: string;
+  market: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface EventItem {
+  id: string;
+  name: string;
+  eventStartDate: string;
+  eventEndDate: string;
+  dateConfidence: DateConfidence;
+  ambushDays: number;
+  tags: string[];
+  tickerIds: string[];
+  notes: string;
+  status: EventStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DirectionItem {
+  id: string;
+  name: string;
+  description: string;
+  keywords: string;
+  enabled: boolean;
+  priority: number;
+  scanIntervalHours: number;
+  lastScannedAt: string | null;
+  createdAt: string;
+}
+
+export interface InboxItem {
+  id: string;
+  directionId: string | null;
+  sourceSummary: string;
+  sourceUrl: string;
+  aiEventName: string;
+  aiEventStartDate: string;
+  aiEventEndDate: string;
+  dateConfidence: DateConfidence;
+  aiTags: string[];
+  aiTickers: { symbol: string; name: string }[];
+  status: InboxStatus;
+  convertedEventId: string | null;
+  scannedAt: string;
+  createdAt: string;
+}

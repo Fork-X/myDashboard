@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { qodercliAuth, query } from '@qoder-ai/qoder-agent-sdk';
 import { createDistiller } from './chat/distiller.mjs';
 import { createChatSessionManager } from './chat/session-manager.mjs';
+import { createScanner } from './scanner.mjs';
 import { openDatabase } from './db/database.mjs';
 import { applyMigrations } from './db/migrate.mjs';
 import { createHandler } from './http/handler.mjs';
@@ -26,6 +27,8 @@ function startDashboard() {
     projectRoot: resolve('.'),
     queryFn,
   });
+  const scanner = createScanner({ db, queryFn });
+  scanner.startPolling();
 
   const port = Number.parseInt(process.env.PORT ?? '3015', 10);
   const host = process.env.HOST ?? '127.0.0.1';
@@ -34,6 +37,7 @@ function startDashboard() {
     publicDir: resolve('dist'),
     chatManager,
     distiller,
+    scanner,
   }));
   server.listen(port, host, () => console.log(`Dashboard: http://${host}:${port}`));
 
