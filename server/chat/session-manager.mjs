@@ -1,5 +1,4 @@
 import { appendMessage, getConversation, listConversations } from '../db/conversations.mjs';
-import { resolveModelPolicy } from './model-policy.mjs';
 
 const DEFAULT_MAX_ACTIVE = 2;
 const DEFAULT_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -105,7 +104,6 @@ export function createChatSessionManager({
         cwd: projectRoot,
         allowedTools: AUTO_APPROVED_TOOLS,
         includePartialMessages: true,
-        ...resolveModelPolicy(),
       },
     });
     session.query = q;
@@ -120,7 +118,10 @@ export function createChatSessionManager({
     try {
       for await (const msg of q) {
         if (session.closed) break;
-        if (msg.type === 'stream_event') {
+        if (msg.type === 'system' && msg.subtype === 'init') {
+          // 运行时上报的实际模型，比询问 AI 自述可靠
+          console.log(`[chat] session model = ${msg.model}`);
+        } else if (msg.type === 'stream_event') {
           const delta = msg.event?.delta;
           if (delta?.type === 'text_delta') {
             turnOutput = true;
@@ -161,9 +162,11 @@ export function createChatSessionManager({
       }
     } catch (error) {
       session.busy = false;
+      const message = error instanceof Error ? error.message : '对话会话异常';
+      console.error(`[chat] session error (conv=${session.conversationId}):`, error);
       broadcast(session.conversationId, {
         type: 'error',
-        message: error instanceof Error ? error.message : '对话会话异常',
+        message,
       });
     } finally {
       if (!session.closed) {

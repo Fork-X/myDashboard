@@ -62,7 +62,7 @@
 | 文件 | 作用 |
 |---|---|
 | `chat/session-manager.mjs` | SDK 会话池：容量上限 + 最久空闲淘汰；`send` 持久化用户消息并投递 SDK inbox；SSE 广播 delta/thinking/message/turn_end；`subscribe` 先回放缓存状态 |
-| `chat/model-policy.mjs` | 模型选择策略（默认模型与允许列表） |
+| `chat/model-policy.mjs` | 模型选择：由 `AI_MODEL` 环境变量决定（默认 `kmodel_latest` = Kimi-K3），在 `index.mjs` 的 `queryFn` 中统一注入，chat / 扫描 / 提炼三处共用 |
 | `chat/distiller.mjs` | 对话 → 想法提炼：调用 skill 输出 JSON，解析容错（无法解析返回 502），`shouldSave=false` 时不落库 |
 
 ### 扫描器

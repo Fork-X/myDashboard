@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { qodercliAuth, query } from '@qoder-ai/qoder-agent-sdk';
+import { resolveModelPolicy } from './chat/model-policy.mjs';
 import { createDistiller } from './chat/distiller.mjs';
 import { createChatSessionManager } from './chat/session-manager.mjs';
 import { createScanner } from './scanner.mjs';
@@ -15,7 +16,7 @@ function startDashboard() {
 
   const queryFn = ({ prompt, options }) => query({
     prompt,
-    options: { ...options, auth: qodercliAuth() },
+    options: { ...resolveModelPolicy(), ...options, auth: qodercliAuth() },
   });
   const chatManager = createChatSessionManager({
     db,
