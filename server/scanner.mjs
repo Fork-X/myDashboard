@@ -1,28 +1,45 @@
 import { createInboxItem, listDirections, markDirectionScanned } from './db/investment.mjs';
 
 export function createScanner({ db, queryFn }) {
+  /** Ids of directions currently being scanned — an in-flight scan is never
+   *  scheduled again, no matter how long the AI call takes. */
+  const scanning = new Set();
+
   async function scanDirection(directionId) {
-    const directions = listDirections(db);
-    const dir = directions.find((d) => d.id === directionId);
-    if (!dir || !dir.enabled) {
-      throw Object.assign(new Error('题材不存在或已停用'), { status: 400 });
+    if (scanning.has(directionId)) {
+      throw Object.assign(new Error('该题材正在扫描中，请稍后再试'), { status: 409 });
     }
+    scanning.add(directionId);
+    try {
+      const directions = listDirections(db);
+      const dir = directions.find((d) => d.id === directionId);
+      if (!dir || !dir.enabled) {
+        throw Object.assign(new Error('题材不存在或已停用'), { status: 400 });
+      }
 
-    const prompt = buildScanPrompt(dir);
-    const text = await callAI(queryFn, prompt, dir.name);
-    const items = parseScanResult(text, dir.id);
-    const saved = [];
-    for (const item of items) {
-      saved.push(createInboxItem(db, item));
-    }
-    markDirectionScanned(db, dir.id);
+      const prompt = buildScanPrompt(dir);
+      const text = await callAI(queryFn, prompt, dir.name);
+      const items = parseScanResult(text, dir.id);
+      const saved = [];
+      for (const item of items) {
+        try {
+          saved.push(createInboxItem(db, item));
+        } catch (err) {
+          // AI output is untrusted: one malformed item must not fail the batch.
+          console.error(`[scanner] 丢弃一条不合格结果: ${err.message}`);
+        }
+      }
+      markDirectionScanned(db, dir.id);
 
-    if (saved.length === 0) {
-      console.log(`[scanner] 题材「${dir.name}」扫描完成，未发现新事件`);
-    } else {
-      console.log(`[scanner] 题材「${dir.name}」扫描完成，投递 ${saved.length} 条到收件箱`);
+      if (saved.length === 0) {
+        console.log(`[scanner] 题材「${dir.name}」扫描完成，未发现新事件`);
+      } else {
+        console.log(`[scanner] 题材「${dir.name}」扫描完成，投递 ${saved.length} 条到收件箱`);
+      }
+      return { direction: dir.name, count: saved.length, items: saved };
+    } finally {
+      scanning.delete(directionId);
     }
-    return { direction: dir.name, count: saved.length, items: saved };
   }
 
   function buildScanPrompt(dir) {
@@ -62,25 +79,28 @@ export function createScanner({ db, queryFn }) {
   function startPolling() {
     const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
+    const backgroundScan = (dir, delayMs = 0) => {
+      setTimeout(() => {
+        if (scanning.has(dir.id)) return;
+        scanDirection(dir.id).catch((err) => {
+          console.error(`[scanner] 题材「${dir.name}」后台扫描失败:`, err.message);
+        });
+      }, delayMs);
+    };
+
     const timer = setInterval(() => {
       try {
         const directions = listDirections(db).filter((d) => d.enabled);
         for (const dir of directions) {
+          if (scanning.has(dir.id)) continue;
           if (!dir.lastScannedAt) {
             // Never scanned — stagger first scan by random delay to avoid thundering herd
-            const delay = Math.floor(Math.random() * 30_000);
-            setTimeout(() => {
-              scanDirection(dir.id).catch((err) => {
-                console.error(`[scanner] 题材「${dir.name}」后台扫描失败:`, err.message);
-              });
-            }, delay);
+            backgroundScan(dir, Math.floor(Math.random() * 30_000));
           } else {
             const elapsed = Date.now() - new Date(dir.lastScannedAt).getTime();
             const intervalMs = dir.scanIntervalHours * 60 * 60 * 1000;
             if (elapsed >= intervalMs) {
-              scanDirection(dir.id).catch((err) => {
-                console.error(`[scanner] 题材「${dir.name}」后台扫描失败:`, err.message);
-              });
+              backgroundScan(dir);
             }
           }
         }

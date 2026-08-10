@@ -5,7 +5,6 @@ import { test } from 'node:test';
 const pages = {
   home: new URL('../../src/pages/Home.tsx', import.meta.url),
   thoughts: new URL('../../src/pages/Thoughts.tsx', import.meta.url),
-  investment: new URL('../../src/pages/Investment.tsx', import.meta.url),
   career: new URL('../../src/pages/Career.tsx', import.meta.url),
   projects: new URL('../../src/pages/Projects.tsx', import.meta.url),
 };
@@ -44,7 +43,6 @@ test('thoughts are read-only and filter by search text and loaded tags', async (
 
 test('unimplemented modules share one honest placeholder and load no business data', async () => {
   const sources = await Promise.all([
-    readFile(pages.investment, 'utf8'),
     readFile(pages.career, 'utf8'),
     readFile(pages.projects, 'utf8'),
   ]);

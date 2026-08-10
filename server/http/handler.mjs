@@ -147,7 +147,8 @@ function sendChatDisabled(response) {
 }
 
 function readMessageBody(request) {
-  return readJson(request).then((body) => {
+  // Chat messages may contain long pasted text (articles, code) — allow up to 1MB.
+  return readJson(request, 1024 * 1024).then((body) => {
     if (!body || typeof body !== 'object' || Array.isArray(body)
       || typeof body.content !== 'string' || !body.content.trim()) {
       throw Object.assign(new Error('消息内容无效'), { status: 400 });

@@ -147,7 +147,12 @@ test('importing the CLI module has no filesystem or database side effects', asyn
 
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout, '');
-    assert.equal(result.stderr, '');
+    // node:sqlite is experimental — Node prints a warning to stderr on startup;
+    // filter known runtime noise, everything else must still be empty.
+    const noise = /ExperimentalWarning|--trace-warnings/;
+    const stderr = result.stderr.split('\n')
+      .filter((line) => line.trim() !== '' && !noise.test(line));
+    assert.deepEqual(stderr, []);
     assert.equal(existsSync(dataDir), false);
   } finally {
     await rm(root, { recursive: true, force: true });
