@@ -14,7 +14,7 @@
 | 数据库 | SQLite（WAL 模式），文件位于 `data/dashboard.sqlite3` |
 | 测试 | node:test 原生测试运行器 |
 
-**运行端口**：开发模式前端 webpack-dev-server `3000`（代理 `/api/*` → `3016`），后端 `3016`。
+**运行端口**：开发模式前端 webpack-dev-server `3000`（代理 `/api/*` → `3016`），后端 `3016`（由 `scripts/dev.mjs` 注入 `PORT`）；`npm start` 启动时后端默认 `3015`。
 
 ## 3. 顶层数据流
 
@@ -130,8 +130,8 @@
 | `tests/repository-boundary.test.mjs` | 仓库边界守护（已删除文件不得复活） |
 | `tests/frontend/*-contract.test.mjs` | 前端契约（页面占位一致性、新模型契约） |
 
-**现状**：148 个测试全部通过；`tsc --noEmit` 通过。
+**现状**：147 个测试全部通过；`tsc --noEmit` 通过。
 
 ## 7. 部署
 
-`Dockerfile` + `compose.yaml` 单容器部署；`scripts/dev.mjs` 本地双进程开发启动。
+仅本地部署：`npm run build` 产出 `dist/`，`npm start` 启动单个 Node 进程同时提供静态页面与同源 API（默认 `127.0.0.1:3015`，可用 `HOST` / `PORT` 覆盖）；数据落在 `data/dashboard.sqlite3`。`scripts/dev.mjs` 用于本地双进程开发启动。

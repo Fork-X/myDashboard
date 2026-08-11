@@ -133,8 +133,7 @@ test('README documents only the independent empty-start workflows', async () => 
   for (const command of ['npm ci', 'npm test', 'npm run typecheck', 'npm run build', 'npm start']) {
     assert.match(readme, new RegExp(command.replaceAll(' ', '\\s+')));
   }
-  assert.match(readme, /docker compose up --build/);
-  assert.match(readme, /\.\/data:\/app\/data/);
+  assert.match(readme, /data\/dashboard\.sqlite3/);
   assert.match(readme, /首次启动[^。\n]*(?:空|没有任何记录)/);
   assert.match(readme, /"title"\s*:\s*"[^"]+"/);
   assert.match(readme, /"content"\s*:\s*"[^"]+"/);
@@ -153,26 +152,6 @@ test('README documents only the independent empty-start workflows', async () => 
     '|server\\/cli\\/(?:import-', 'se', 'lf|se', 'ed-', 'de', 'mo)',
   ].join(''));
   assert.doesNotMatch(readme, retiredCommand);
-});
-
-test('container packaging has one app, persisted data, and health checks', async () => {
-  const compose = await readFile(join(projectRoot, 'compose.yaml'), 'utf8');
-  const dockerfile = await readFile(join(projectRoot, 'Dockerfile'), 'utf8');
-
-  assert.match(compose, /^services:\n  app:/);
-  assert.match(compose, /\.\/data:\/app\/data/);
-  assert.match(compose, /healthcheck:[\s\S]*\/api\/health/);
-  assert.match(dockerfile, /HEALTHCHECK[^\n]*[\s\S]*\/api\/health/);
-
-  const runtimeStage = dockerfile.slice(dockerfile.lastIndexOf('\nFROM ') + 1);
-  const copiedBuildPaths = [...runtimeStage.matchAll(
-    /^COPY --from=build \/app\/([^\s]+)\s+\.\/([^\s]+)$/gm,
-  )].map((match) => [match[1], match[2]]);
-  assert.deepEqual(copiedBuildPaths, [
-    ['dist', 'dist'],
-    ['server', 'server'],
-    ['db', 'db'],
-  ]);
 });
 
 test('server applies migrations before it starts listening', async () => {

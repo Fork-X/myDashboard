@@ -26,27 +26,7 @@ npm start
 
 打开 <http://127.0.0.1:3015>。启动过程会先执行数据库迁移，再监听端口；数据默认保存在 `data/dashboard.sqlite3`。按 `Ctrl+C` 停止服务，再次运行 `npm start` 会继续使用同一数据库。
 
-## Docker 运行
-
-前置条件：Docker Engine 和 Docker Compose；不需要在宿主机安装 Node.js。
-
-```bash
-docker compose up --build
-```
-
-打开 <http://127.0.0.1:3015>。Compose 只启动一个 app 容器，并将宿主机的 `./data` 挂载为容器内的 `/app/data`（`./data:/app/data`）。因此 `./data/dashboard.sqlite3` 位于宿主机，容器重启或重建后仍会保留。健康检查访问 `/api/health`。
-
-如需修改宿主机端口，可设置 `DASHBOARD_PORT`，例如：
-
-```bash
-DASHBOARD_PORT=8080 docker compose up --build
-```
-
-停止并移除容器：
-
-```bash
-docker compose down
-```
+需要确认服务是否已就绪时，访问 <http://127.0.0.1:3015/api/health>，正常返回 `{"data":{"status":"ok"}}`。
 
 ## 导入个人思考
 
