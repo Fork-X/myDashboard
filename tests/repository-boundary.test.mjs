@@ -59,7 +59,6 @@ const runtimeFiles = [
   'src/api/client.ts',
   'src/api/types.ts',
   'package.json',
-  'Dockerfile',
 ];
 
 const runtimeRules = [

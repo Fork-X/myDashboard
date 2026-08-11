@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const commands = [
-  spawn(process.execPath, ['server/index.mjs'], {
+  spawn(process.execPath, ['--env-file-if-exists=.env', 'server/index.mjs'], {
     stdio: 'inherit',
     env: { ...process.env, PORT: '3016' },
   }),

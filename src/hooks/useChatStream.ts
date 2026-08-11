@@ -55,6 +55,20 @@ export function useChatStream(conversationId: string | null) {
       });
 
     const source = new EventSource(`/api/chats/${encodeURIComponent(conversationId)}/stream`);
+    // Deltas/messages that arrive while the connection is down are lost;
+    // on reconnect, re-sync from the full snapshot (the source of truth).
+    let connected = false;
+    source.onopen = () => {
+      if (cancelled) return;
+      if (connected) {
+        getConversation(conversationId)
+          .then((detail) => {
+            if (!cancelled) setMessages(detail.messages);
+          })
+          .catch(() => {});
+      }
+      connected = true;
+    };
     source.onmessage = (event) => {
       if (cancelled) return;
       let parsed: ChatStreamEvent | null = null;

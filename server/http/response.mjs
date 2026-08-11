@@ -3,7 +3,7 @@ export function sendJson(response, status, payload) {
   response.end(JSON.stringify(payload));
 }
 
-export async function readJson(request, limit = 64 * 1024) {
+export async function readJson(request, limit = 256 * 1024) {
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {

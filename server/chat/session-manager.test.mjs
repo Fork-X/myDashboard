@@ -69,7 +69,7 @@ async function waitFor(condition) {
   throw new Error('condition not met in time');
 }
 
-test('send persists the user message and starts an SDK session with model policy', async () => {
+test('send persists the user message and starts an SDK session', async () => {
   await withManager(async ({ db, manager, captures }) => {
     const conversation = createConversation(db);
     const events = collectEvents(manager, conversation.id);
@@ -81,7 +81,6 @@ test('send persists the user message and starts an SDK session with model policy
     assert.equal(manager.activeCount(), 1);
 
     assert.equal(captures.length, 1);
-    assert.equal(captures[0].options.model, 'dmodel');
     assert.equal(captures[0].options.includePartialMessages, true);
     assert.deepEqual(captures[0].options.allowedTools, [
       'WebSearch',

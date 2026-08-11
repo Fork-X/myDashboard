@@ -1,5 +1,4 @@
 import { getConversation } from '../db/conversations.mjs';
-import { resolveModelPolicy } from './model-policy.mjs';
 
 const MESSAGE_MAX_CHARS = 2000;
 
@@ -82,7 +81,6 @@ export function createDistiller({ db, queryFn, projectRoot }) {
           allowedTools: [],
           settingSources: ['project'],
           skills: ['distill'],
-          ...resolveModelPolicy(),
         },
       });
 
