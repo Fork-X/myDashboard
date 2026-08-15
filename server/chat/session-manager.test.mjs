@@ -163,6 +163,46 @@ test('suppresses the SDK init result that carries no assistant output', async ()
   }, { events: sdkEvents });
 });
 
+test('surfaces a failed result as an error event instead of closing silently', async () => {
+  const sdkEvents = [{
+    type: 'result',
+    subtype: 'error_during_execution',
+    is_error: true,
+    terminal_reason: 'auth_expired',
+    errors: ['Local login has expired. Run "qodercli login" to refresh.'],
+  }];
+  await withManager(async ({ db, manager }) => {
+    const conversation = createConversation(db);
+    const received = collectEvents(manager, conversation.id);
+    await manager.send(conversation.id, 'hi');
+
+    await waitFor(() => received.some((event) => event.type === 'error'));
+
+    const failure = received.find((event) => event.type === 'error');
+    assert.match(failure.message, /qodercli login/);
+    assert.equal(received.some((event) => event.type === 'turn_end'), false);
+    assert.equal(manager.isBusy(conversation.id), false);
+  }, { events: sdkEvents });
+});
+
+test('falls back to the reported errors when the failure is not auth related', async () => {
+  const sdkEvents = [{
+    type: 'result',
+    subtype: 'error_during_execution',
+    is_error: true,
+    errors: ['model quota exhausted'],
+  }];
+  await withManager(async ({ db, manager }) => {
+    const conversation = createConversation(db);
+    const received = collectEvents(manager, conversation.id);
+    await manager.send(conversation.id, 'hi');
+
+    await waitFor(() => received.some((event) => event.type === 'error'));
+
+    assert.equal(received.find((event) => event.type === 'error').message, 'model quota exhausted');
+  }, { events: sdkEvents });
+});
+
 test('replays recent history as context when reactivating a conversation', async () => {
   await withManager(async ({ db, manager, captures }) => {
     const conversation = createConversation(db);

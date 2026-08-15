@@ -7,7 +7,7 @@ function parseStreamEvent(value: unknown): ChatStreamEvent | null {
   const type = (value as { type?: unknown }).type;
   if (
     type === 'status' || type === 'delta' || type === 'thinking' || type === 'message'
-    || type === 'turn_end' || type === 'error' || type === 'session_closed'
+    || type === 'queue' || type === 'turn_end' || type === 'error' || type === 'session_closed'
   ) {
     return value as ChatStreamEvent;
   }
@@ -19,6 +19,7 @@ export function useChatStream(conversationId: string | null) {
   const [draft, setDraft] = useState('');
   const [draftThinking, setDraftThinking] = useState('');
   const [busy, setBusy] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export function useChatStream(conversationId: string | null) {
     setDraft('');
     setDraftThinking('');
     setBusy(false);
+    setQueued(false);
     setError(null);
     setLoading(true);
 
@@ -84,9 +86,11 @@ export function useChatStream(conversationId: string | null) {
           break;
         case 'delta':
           setBusy(true);
+          setQueued(false);
           setDraft((prev) => prev + parsed.text);
           break;
         case 'thinking':
+          setQueued(false);
           setDraftThinking((prev) => prev + parsed.text);
           break;
         case 'message':
@@ -100,17 +104,24 @@ export function useChatStream(conversationId: string | null) {
             setDraftThinking('');
           }
           break;
+        case 'queue':
+          // 平台算力排队：与「卡住」在感官上无法区分，必须显式告知
+          setQueued(parsed.status !== 'ready');
+          break;
         case 'turn_end':
           setBusy(false);
+          setQueued(false);
           setDraft('');
           setDraftThinking('');
           break;
         case 'error':
           setBusy(false);
+          setQueued(false);
           setError(parsed.message);
           break;
         case 'session_closed':
           setBusy(false);
+          setQueued(false);
           break;
         default:
           break;
@@ -144,6 +155,6 @@ export function useChatStream(conversationId: string | null) {
   }, [conversationId]);
 
   return {
-    messages, draft, draftThinking, busy, sending, loading, error, send,
+    messages, draft, draftThinking, busy, queued, sending, loading, error, send,
   };
 }

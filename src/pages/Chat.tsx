@@ -169,7 +169,7 @@ export default function Chat() {
                   {stream.busy && !stream.draft && !stream.draftThinking && (
                     <div className="flex items-center gap-2 text-sm text-vintage-brown">
                       <Loader2 size={16} className="animate-spin" />
-                      AI 正在思考...
+                      {stream.queued ? '模型排队中，等待平台算力...' : 'AI 正在思考...'}
                     </div>
                   )}
                 </>
