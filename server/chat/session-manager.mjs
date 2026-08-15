@@ -1,4 +1,5 @@
 import { appendMessage, getConversation, listConversations } from '../db/conversations.mjs';
+import { describeResultError } from '../ai-result.mjs';
 
 const DEFAULT_MAX_ACTIVE = 2;
 const DEFAULT_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -115,12 +116,19 @@ export function createChatSessionManager({
     let text = '';
     let thinking = '';
     let turnOutput = false;
+    let queueStatus = null;
     try {
       for await (const msg of q) {
         if (session.closed) break;
         if (msg.type === 'system' && msg.subtype === 'init') {
           // 运行时上报的实际模型，比询问 AI 自述可靠
           console.log(`[chat] session model = ${msg.model}`);
+        } else if (msg.type === 'system' && msg.subtype === 'model_queue_status') {
+          // 平台排队时每秒重复上报同一状态，只在状态变化时透出，避免刷满 SSE
+          if (msg.status !== queueStatus) {
+            queueStatus = msg.status;
+            broadcast(session.conversationId, { type: 'queue', status: msg.status });
+          }
         } else if (msg.type === 'stream_event') {
           const delta = msg.event?.delta;
           if (delta?.type === 'text_delta') {
@@ -154,10 +162,21 @@ export function createChatSessionManager({
         } else if (msg.type === 'result') {
           session.busy = false;
           session.lastActiveAt = now();
-          if (turnOutput) {
+          if (msg.is_error) {
+            // 失败的 result 不抛异常，只带 errors/terminal_reason —— 不转成 error
+            // 事件的话，前端只会收到一个 session_closed，用户完全看不到原因。
+            const reason = describeResultError(msg);
+            console.error(
+              `[chat] session result error (conv=${session.conversationId}):`,
+              msg.terminal_reason ?? msg.subtype,
+              msg.errors ?? [],
+            );
+            broadcast(session.conversationId, { type: 'error', message: reason });
+          } else if (turnOutput) {
             broadcast(session.conversationId, { type: 'turn_end', subtype: msg.subtype });
           }
           turnOutput = false;
+          queueStatus = null;
         }
       }
     } catch (error) {

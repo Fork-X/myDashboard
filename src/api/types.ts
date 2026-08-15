@@ -65,6 +65,7 @@ export type ChatStreamEvent =
   | { type: 'delta'; text: string }
   | { type: 'thinking'; text: string }
   | { type: 'message'; message: ChatMessage }
+  | { type: 'queue'; status: string }
   | { type: 'turn_end'; subtype?: string }
   | { type: 'error'; message: string }
   | { type: 'session_closed' };
