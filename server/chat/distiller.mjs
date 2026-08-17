@@ -1,4 +1,6 @@
+import { resolve } from 'node:path';
 import { getConversation } from '../db/conversations.mjs';
+import { loadSystemPrompt } from '../prompt.mjs';
 
 const MESSAGE_MAX_CHARS = 2000;
 
@@ -14,7 +16,7 @@ function buildTranscript(messages) {
 
 function buildPrompt(transcript, focus) {
   const focusLine = focus ? `\n\n关注角度：${focus}` : '';
-  return `使用 distill skill，将以下对话记录提炼为一份思考精华草稿。严格按 skill 的输出契约只返回 JSON。\n\n${transcript}${focusLine}`;
+  return `将以下对话记录提炼为一份思考精华草稿。严格按系统提示词中的输出契约只返回 JSON。\n\n${transcript}${focusLine}`;
 }
 
 function extractJson(text) {
@@ -66,6 +68,14 @@ function normalizeDraft(value) {
 }
 
 export function createDistiller({ db, queryFn, projectRoot }) {
+  // skill 内容住在仓库目录 skills/distill/，读文件注入 systemPrompt 而非使用
+  // SDK 的 Skill 发现机制：不依赖 .qoder/ 目录，换任何 agent SDK 都成立。
+  let skillPromise = null;
+  const loadSkill = () => {
+    skillPromise ??= loadSystemPrompt(resolve(projectRoot, 'skills/distill'), 'SKILL.md');
+    return skillPromise;
+  };
+
   return {
     async distill(conversationId, focus = '') {
       const detail = getConversation(db, conversationId);
@@ -74,13 +84,13 @@ export function createDistiller({ db, queryFn, projectRoot }) {
         return { shouldSave: false, reason: '对话还没有消息，先聊几句再沉淀' };
       }
 
+      const skillText = await loadSkill();
       const q = queryFn({
         prompt: buildPrompt(buildTranscript(detail.messages), focus.trim()),
         options: {
           cwd: projectRoot,
           allowedTools: [],
-          settingSources: ['project'],
-          skills: ['distill'],
+          systemPrompt: { type: 'preset', preset: 'qodercli', append: skillText },
         },
       });
 

@@ -73,8 +73,11 @@ test('parses a savable draft from the skill JSON output', async () => {
 
     assert.equal(captures.length, 1);
     const [{ prompt, options }] = captures;
-    assert.deepEqual(options.skills, ['distill']);
-    assert.deepEqual(options.settingSources, ['project']);
+    // skill 内容来自 skills/distill/SKILL.md，注入 systemPrompt 而非 SDK Skill 机制
+    assert.equal(options.skills, undefined);
+    assert.equal(options.systemPrompt.type, 'preset');
+    assert.match(options.systemPrompt.append, /distill/i);
+    assert.doesNotMatch(options.systemPrompt.append, /^---/, 'frontmatter 应被剥除');
     assert.equal(typeof prompt, 'string');
     assert.match(prompt, /要不要做标签体系？/);
     assert.match(prompt, /可以先观察主题分布。/);

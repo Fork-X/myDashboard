@@ -142,11 +142,14 @@ test('README documents only the independent empty-start workflows', async () => 
   assert.match(readme, /--apply/);
   assert.match(readme, /目标[^。\n]*(?:编辑|新增|更新)/);
   assert.match(readme, /TODO[^。\n]*(?:编辑|新增|更新)/i);
-  assert.match(readme, /投资理财[^。\n]*职业生涯[^。\n]*个人项目[^。\n]*(?:占位|待设计)/);
-  assert.match(
-    readme,
-    /不(?:读取|接入)[^。\n]*外部内容源[^。\n]*云账号[^。\n]*外部数据库[^。\n]*演示数据[^。\n]*个人数据/,
-  );
+  // 职业生涯与个人项目仍是占位模块；投资理财已实现，不得再声称占位
+  assert.match(readme, /职业生涯[^。\n]*个人项目[^。\n]*(?:占位|待设计)/);
+  assert.doesNotMatch(readme, /投资理财[^。\n]*(?:占位|待设计)/);
+  // 独立性声明的现行版本：不接外部数据库、无演示/个人数据；
+  // 信源拉取（RSS）已是核心功能，不得再声称“不读取外部内容源”
+  assert.match(readme, /不接入[^。\n]*外部数据库/);
+  assert.match(readme, /(?:不包含|没有)[^。\n]*演示数据/);
+  assert.doesNotMatch(readme, /不读取[^。\n]*外部内容源/);
   const retiredCommand = new RegExp([
     'npm run (?:import:', 'se', 'lf|se', 'ed:', 'de', 'mo)',
     '|server\\/cli\\/(?:import-', 'se', 'lf|se', 'ed-', 'de', 'mo)',

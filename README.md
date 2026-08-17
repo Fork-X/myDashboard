@@ -1,59 +1,56 @@
 # Local Personal Dashboard
 
-一个完全独立、本地优先的个人看板。Node 进程同时提供 React 页面、同源 HTTP API 和内嵌 SQLite；SQLite 是唯一运行时数据源。
+本地优先的个人仪表盘：单个 Node 进程同时提供 React 页面、同源 HTTP API 和内嵌 SQLite。
+不接入外部数据库，不包含演示数据和个人数据；外部依赖只有两类：只读拉取的 RSS 信源，以及 AI 能力所需的 qodercli 登录。
 
-本项目不读取任何外部内容源，不需要云账号，不接入外部数据库，不包含演示数据，也不包含个人数据。首次启动会自动创建数据库并执行迁移，数据库为空，页面如实显示空状态。
+## 功能一览
 
-## 功能范围
+- **投资理财**（核心）：板块化 AI 事件扫描 → 收件箱人工确收 → 事件时间线
+- 想法记录（网页只读，CLI 导入）、AI 对话与提炼
+- 待办四象限：TODO 支持新增、编辑、更新状态和删除；目标支持新增、编辑与追加不可修改的进展
+- 职业生涯与个人项目目前是占位模块
 
-- 个人思考：通过本地 CLI 预览并追加，网页只读。
-- 待办规划：可在网页新增、编辑和更新持续目标，追加不可修改的目标进展；TODO 支持新增、编辑、更新状态和删除。
-- 投资理财、职业生涯、个人项目目前是“功能待设计”的占位模块，不请求业务数据。
+## 新电脑上手（按顺序读）
+
+1. **[docs/DEVLOG.md](docs/DEVLOG.md)** —— 当前状态：已完成什么、哪些是半成品、下一步做什么
+2. **[docs/SCAN-PIPELINE.md](docs/SCAN-PIPELINE.md)** —— 扫描链路操作手册：策略文件怎么改、环境约束（内网 WebSearch 挂死等）、排查速查
+3. **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** —— 逐文件代码地图
+
+> `docs/archive/` 下是 2026-08-04 的初始设计稿，已被板块化架构取代，仅作历史记录。
 
 ## 本地运行
 
-前置条件：Node.js `>=24.15.0`。
-
-从全新检出开始安装、验证、构建并启动：
+前置：Node.js `>=24.15.0`；AI 功能需本机 `qodercli login` 有效（chat/扫描/提炼共用）。
 
 ```bash
 npm ci
-npm test
+npm test          # 当前应全绿
 npm run typecheck
 npm run build
-npm start
+npm start         # http://127.0.0.1:3015
 ```
 
-打开 <http://127.0.0.1:3015>。启动过程会先执行数据库迁移，再监听端口；数据默认保存在 `data/dashboard.sqlite3`。按 `Ctrl+C` 停止服务，再次运行 `npm start` 会继续使用同一数据库。
+首次启动自动建库并跑迁移，数据库为空，页面如实显示空状态；数据在 `data/dashboard.sqlite3`（**gitignore，不随仓库走**——换机后题材需在 UI 重建，或手动拷贝该文件）。健康探针：`/api/health`。
 
-需要确认服务是否已就绪时，访问 <http://127.0.0.1:3015/api/health>，正常返回 `{"data":{"status":"ok"}}`。
+开发模式：`npm run dev`（前端 3000，代理到后端 3016）。
 
-## 导入个人思考
+## 常用命令
 
-准备一个绝对路径下的 JSON 文件，例如 `/absolute/path/to/thought.json`：
+| 命令 | 用途 |
+|---|---|
+| `npm run scan:dry [板块]` | 空跑扫描管道：验证信源可达性 + prompt 渲染，不调 AI 不花钱 |
+| `npm run db:migrate` | 手动执行数据库迁移 |
+| `npm run thought:import -- --input <file> [--apply]` | 导入想法：默认只预览，加 `--apply` 才写入 |
+
+导入想法的 JSON 格式：
 
 ```json
-{
-  "title": "提炼后的标题",
-  "content": "提炼后的正文",
-  "tags": ["用户明确指定的标签"]
-}
+{ "title": "提炼后的标题", "content": "提炼后的正文", "tags": ["标签"] }
 ```
 
-先运行 preview。它只校验并打印规范化后的候选，不创建或写入数据库：
+## 投资扫描（一分钟版）
 
-```bash
-npm run thought:import -- --input /absolute/path/to/thought.json
-```
-
-确认内容后再显式写入：
-
-```bash
-npm run thought:import -- --input /absolute/path/to/thought.json --apply
-```
-
-`id` 和创建时间由系统生成；同一自然日重复 apply 相同标题和正文不会新增重复记录。CLI 不提供修改或删除已有思考的命令。
-
-## 首次运行
-
-全新的 `data` 目录是正常状态：个人思考、持续目标、目标进展和 TODO 都为空。项目没有预置数据命令，也不会静默加载 Mock 或外部内容；可以从空状态开始在网页维护目标和 TODO，并通过上述 CLI 追加个人思考。
+- 策略配置在 `asset/`：`_default/` 是缺省仓库，板块目录（航天/化工/机器人/半导体）只写差异项
+- 信源为原生 RSS，AI 只做提取不联网（内网 WebSearch 不可用，详见 SCAN-PIPELINE.md）
+- 改完任何策略文件：`npm run scan:dry` → 读 `data/dry-run/{板块}.md` → UI 触发真实扫描
+- 每次扫描发给模型的完整 prompt 落盘在 `data/last-prompt/`，出问题先看它

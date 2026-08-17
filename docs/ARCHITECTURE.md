@@ -1,5 +1,8 @@
 # myDashboardV2 架构设计与功能说明
 
+> **维护约定：任何影响架构与链路的改动，必须同步更新本文档；扫描链路的变更还需同步 `docs/SCAN-PIPELINE.md`。**
+> 扫描链路的生命周期、策略文件修改指南、环境约束与排查手册见 [SCAN-PIPELINE.md](./SCAN-PIPELINE.md)。
+
 ## 1. 项目定位
 
 个人独立仪表盘（Personal Dashboard），整合**想法记录、待办四象限、目标跟踪、AI 对话、投资理财（事件日历 / 题材扫描 / 收件箱）**五大功能域。前后端分离，单用户本地部署，无鉴权。
@@ -22,8 +25,15 @@
 浏览器 ──HTTP/SSE──> server/http/handler.mjs ──> server/db/*.mjs ──> SQLite
                         │
                         ├─> chat/session-manager.mjs ──> qoder-agent-sdk（AI 会话）
-                        └─> scanner.mjs（定时轮询）──> qoder-agent-sdk（AI 扫描）──> inbox_items 表
+                        └─> pipeline.mjs（定时轮询）
+                              │  读 asset/{板块}/ 策略配置
+                              ├─> fetcher.mjs（拉 RSS 信源）
+                              └─> qoder-agent-sdk（AI 提取）──> inbox_items 表
 ```
+
+**asset/ 策略层（继承模型）**：`_default/` 是缺省仓库（全量 domain.json + 通用信源 + 统一 prompt/skill 模板，key=stock 兼容存量数据，不对外暴露）；板块目录（aerospace / chemical / robotics / semiconductor）只写差异项——domain.json 字段覆盖缺省值、sources.yaml 与通用信源合并去重、prompt.md/skill.md 缺失时自动回落。这些文件是用户的投资策略面，与引擎代码解耦。
+
+**skills/ 目录**：非投资域的 agent skill 的 canonical 位置（当前仅 `distill/`），随仓库分发；消费方读文件注入 systemPrompt，不依赖任何厂商的 skill 发现目录（.qoder/.claude 等）；若需在某 IDE 里交互式使用，建符号链接到对应厂商目录即可。
 
 ## 4. 后端（server/）逐文件说明
 
@@ -49,11 +59,13 @@
 | `db/migrations/001_initial.sql` | thoughts / todos / goals / goal_progress 表 |
 | `db/migrations/002_conversations.sql` | conversations / messages 表（级联删除） |
 | `db/migrations/003_investment.sql` | tickers / events / directions / inbox_items 表 |
+| `db/migrations/004_domain.sql` | directions 增加 domain 列，inbox_items 增加 domain 列（存量行默认 'stock'） |
+| `db/migrations/005_drop_sources_json.sql` | 移除从未被使用的题材级信源覆盖列 sources_json |
 | `db/thoughts.mjs` | 想法 CRUD；同日同标题内容去重（按本地日历日而非 UTC） |
 | `db/todos.mjs` | 待办 CRUD；四象限（重要/紧急正交布尔）、完成生命周期、严格字段白名单校验 |
 | `db/goals.mjs` | 目标 CRUD + 进度时间线（有进度的目标禁止删除，由 DB 约束保证） |
 | `db/conversations.mjs` | 对话与消息持久化；首条用户消息自动生成标题 |
-| `db/investment.mjs` | 投资域四实体：ticker（按 symbol 去重）、event（伏击天数/标签/关联股票）、direction（扫描题材）、inbox_item（pending→converted/ignored 状态机，转换时事务内创建 event） |
+| `db/investment.mjs` | 投资域四实体：ticker（按 symbol 去重）、event（伏击天数/标签/关联股票）、direction（扫描题材，含所属板块 domain）、inbox_item（pending→converted/ignored 状态机，转换时事务内创建 event） |
 
 **统一约定**：所有写操作包事务（`BEGIN IMMEDIATE`）；输入严格校验（`rejectUnknownFields` 白名单 + 类型检查，TypeError → 400）。
 
@@ -63,13 +75,15 @@
 |---|---|
 | `chat/session-manager.mjs` | SDK 会话池：容量上限 + 最久空闲淘汰；`send` 持久化用户消息并投递 SDK inbox；SSE 广播 delta/thinking/message/turn_end；`subscribe` 先回放缓存状态 |
 | `chat/model-policy.mjs` | 模型选择：由 `AI_MODEL` 环境变量决定（默认 `kmodel_latest` = Kimi-K3），在 `index.mjs` 的 `queryFn` 中统一注入，chat / 扫描 / 提炼三处共用 |
-| `chat/distiller.mjs` | 对话 → 想法提炼：调用 skill 输出 JSON，解析容错（无法解析返回 502），`shouldSave=false` 时不落库 |
+| `chat/distiller.mjs` | 对话 → 想法提炼：读仓库内 `skills/distill/SKILL.md` 注入 systemPrompt（不依赖 SDK Skill 发现机制与 .qoder/ 目录），解析容错（无法解析返回 502），`shouldSave=false` 时不落库 |
 
-### 扫描器
+### 扫描链路（详见 [SCAN-PIPELINE.md](./SCAN-PIPELINE.md)）
 
 | 文件 | 作用 |
 |---|---|
-| `server/scanner.mjs` | 题材定时扫描：5 分钟轮询 directions，到期/未扫描的调 AI（WebSearch）生成事件 JSON，多阶段提取（code block → 括号配平正则），写入 inbox_items；内存占位防重入（同一题材不并发扫描），单条坏数据丢弃不拖垮整批 |
+| `server/pipeline.mjs` | 通用扫描管道：发现 asset/ 板块（_default 继承合并）→ 拉信源（通用+专属合并去重）→ 拼 prompt（skill.md 注入 systemPrompt，缺失回落 _default）→ 调 AI（默认 10 分钟超时、排队/工具调用实时日志、CLI stderr 透出）→ 分级提取 JSON（代码块→括号配平）→ 写收件箱；5 分钟轮询，同题材并发锁；每次扫描把最终 prompt 写入 `data/last-prompt/` | 
+| `server/fetcher.mjs` | 信源抓取纯函数：RSS 2.0/Atom 解析，并行拉取，压缩成「标题+链接+摘要」（约 1.4MB → 11KB） |
+| `server/prompt.mjs` | prompt 组装：`{{变量}}` 替换（变量清单 `PROMPT_VARIABLES` 强校验，写错直接报错）、HTML 注释块发送前剔除、skill.md 去 frontmatter、最终 prompt 落盘 |
 
 ### CLI
 
@@ -77,6 +91,7 @@
 |---|---|
 | `cli/import-thought.mjs` | 从 JSON 文件导入想法：`--preview` 无副作用预演；`--apply` 事务写入（重复导入幂等） |
 | `cli/migrate.mjs` | 手动执行数据库迁移 |
+| `scripts/scan-dry.mjs` | `npm run scan:dry [板块]`：空跑扫描管道（拉信源+渲染 prompt，不调 AI），产物写 `data/dry-run/`，用于改策略文件后的即时验证 |
 
 ## 5. 前端（src/）逐文件说明
 
@@ -108,7 +123,7 @@
 | `Chat.tsx` | 对话页：会话列表 + 流式消息 + DistillModal 提炼 |
 | `Investment.tsx` | 投资域布局：子导航（日历/题材/收件箱）+ Outlet |
 | `InvestmentCalendar.tsx` | 事件日历 + 阶段时间轴（PhaseBar：潜伏期/准备期/事件期） |
-| `DirectionBoard.tsx` | 题材管理 + 手动触发扫描 |
+| `DirectionBoard.tsx` | 题材管理（含所属板块选择，板块列表来自 `GET /api/domains`）+ 手动触发扫描 |
 | `Inbox.tsx` | AI 收件箱：确认（编辑后转事件）/ 忽略 |
 | `Career.tsx` / `Projects.tsx` | 占位页（ComingSoon） |
 
@@ -130,7 +145,7 @@
 | `tests/repository-boundary.test.mjs` | 仓库边界守护（已删除文件不得复活） |
 | `tests/frontend/*-contract.test.mjs` | 前端契约（页面占位一致性、新模型契约） |
 
-**现状**：147 个测试全部通过；`tsc --noEmit` 通过。
+**现状**：177 个测试全部通过（`npm test`）；`tsc --noEmit` 通过。
 
 ## 7. 部署
 
