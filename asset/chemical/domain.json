@@ -1,0 +1,6 @@
+{
+  "name": "化工",
+  "key": "chemical",
+  "scanIntervalHours": 8,
+  "ambushDays": 30
+}

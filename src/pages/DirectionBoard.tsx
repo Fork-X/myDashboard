@@ -19,7 +19,7 @@ export default function DirectionBoard() {
   if (error) return <ErrorState message={error} />;
 
   async function handleSave(input: {
-    name: string; description: string; keywords: string; enabled: boolean; priority: number; scanIntervalHours: number;
+    name: string; description: string; keywords: string; domain: string; enabled: boolean; priority: number; scanIntervalHours: number;
   }) {
     setSaving(true);
     try {
@@ -59,6 +59,7 @@ export default function DirectionBoard() {
             name: editingDir.name,
             description: editingDir.description,
             keywords: editingDir.keywords,
+            domain: editingDir.domain,
             enabled: editingDir.enabled,
             priority: editingDir.priority,
             scanIntervalHours: editingDir.scanIntervalHours,
@@ -91,6 +92,9 @@ export default function DirectionBoard() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-lg font-bold text-vintage-dark">{dir.name}</h3>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                      {dir.domain}
+                    </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       dir.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                     }`}>

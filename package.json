@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test",
     "db:migrate": "node server/cli/migrate.mjs",
+    "scan:dry": "node scripts/scan-dry.mjs",
     "thought:import": "node server/cli/import-thought.mjs"
   },
   "dependencies": {

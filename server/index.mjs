@@ -4,7 +4,7 @@ import { qodercliAuth, query } from '@qoder-ai/qoder-agent-sdk';
 import { resolveModelPolicy } from './chat/model-policy.mjs';
 import { createDistiller } from './chat/distiller.mjs';
 import { createChatSessionManager } from './chat/session-manager.mjs';
-import { createScanner } from './scanner.mjs';
+import { createPipeline } from './pipeline.mjs';
 import { openDatabase } from './db/database.mjs';
 import { applyMigrations } from './db/migrate.mjs';
 import { createHandler } from './http/handler.mjs';
@@ -28,7 +28,12 @@ function startDashboard() {
     projectRoot: resolve('.'),
     queryFn,
   });
-  const scanner = createScanner({ db, queryFn });
+  const scanner = createPipeline({
+    db,
+    queryFn,
+    assetDir: resolve('asset'),
+    dumpDir: resolve(dataDir, 'last-prompt'),
+  });
   scanner.startPolling();
 
   const port = Number.parseInt(process.env.PORT ?? '3015', 10);

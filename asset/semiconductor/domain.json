@@ -1,0 +1,6 @@
+{
+  "name": "半导体",
+  "key": "semiconductor",
+  "scanIntervalHours": 6,
+  "ambushDays": 60
+}

@@ -1,0 +1,19 @@
+# 半导体板块专属信源（自动与 _default/sources.yaml 的通用财经源合并）
+#
+# 改完请跑 npm run scan:dry -- semiconductor 确认能抓到内容。
+
+sources:
+  - name: "Semiconductor Digest"
+    type: rss
+    url: "https://www.semiconductor-digest.com/feed/"
+    maxItems: 8
+
+  - name: "SemiWiki"
+    type: rss
+    url: "https://semiwiki.com/feed/"
+    maxItems: 5
+
+# 待补：国内半导体中文源。以下经实测不可用，留作线索
+#   https://rsshub.app/jiweinet/news      403（内网不可达 rsshub）
+#   https://rsshub.app/semiinsights/news  403（内网不可达 rsshub）
+#   https://rsshub.app/semi/news          403（内网不可达 rsshub）

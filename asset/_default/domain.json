@@ -1,0 +1,10 @@
+{
+  "name": "通用",
+  "key": "stock",
+  "enabled": true,
+  "scanIntervalHours": 6,
+  "ambushDays": 60,
+  "allowedTools": ["WebSearch"],
+  "maxTurns": 2,
+  "timeoutMinutes": 10
+}

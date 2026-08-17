@@ -109,11 +109,18 @@ export interface DirectionItem {
   name: string;
   description: string;
   keywords: string;
+  domain: string;
   enabled: boolean;
   priority: number;
   scanIntervalHours: number;
   lastScannedAt: string | null;
   createdAt: string;
+}
+
+export interface DomainInfo {
+  key: string;
+  name: string;
+  ambushDays: number;
 }
 
 export interface InboxItem {

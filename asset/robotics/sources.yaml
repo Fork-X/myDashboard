@@ -1,0 +1,13 @@
+# 机器人板块专属信源（自动与 _default/sources.yaml 的通用财经源合并）
+#
+# 目前尚未找到可用的机器人行业专属原生 RSS，暂只用继承的通用财经源，
+# 依靠题材关键词过滤（通用源已能覆盖部分标的动态，如宇树科技 IPO）。
+#
+# 改完请跑 npm run scan:dry -- robotics 确认能抓到内容。
+
+sources: []
+
+# 待补：机器人行业专属源。以下经实测不可用，留作线索
+#   https://rsshub.app/robot-china/news   403（内网不可达 rsshub）
+#   https://rsshub.app/gg-robot/news      403（内网不可达 rsshub）
+#   https://www.therobotreport.com/feed/  403（拒绝非浏览器 UA）

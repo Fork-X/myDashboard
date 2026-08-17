@@ -13,7 +13,7 @@ test('applies the independent schema exactly once', async () => {
     const migrationsDir = resolve('server/db/migrations');
     assert.deepEqual(
       applyMigrations(db, migrationsDir),
-      ['001_initial.sql', '002_conversations.sql', '003_investment.sql'],
+      ['001_initial.sql', '002_conversations.sql', '003_investment.sql', '004_domain.sql'],
     );
     assert.deepEqual(applyMigrations(db, migrationsDir), []);
 

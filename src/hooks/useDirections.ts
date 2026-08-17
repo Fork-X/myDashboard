@@ -68,11 +68,11 @@ export function useDirections() {
     } finally { mutationLock.current = false; }
   }, [loadData]);
 
-  const create = useCallback(async (input: { name: string; description?: string; keywords?: string; enabled?: boolean; priority?: number; scanIntervalHours?: number }) => {
+  const create = useCallback(async (input: { name: string; description?: string; keywords?: string; domain?: string; enabled?: boolean; priority?: number; scanIntervalHours?: number }) => {
     await mutate(() => createDirection(input), '题材保存失败', '题材已保存，但刷新失败');
   }, [mutate]);
 
-  const update = useCallback(async (id: string, patch: Partial<{ name: string; description: string; keywords: string; enabled: boolean; priority: number; scanIntervalHours: number }>) => {
+  const update = useCallback(async (id: string, patch: Partial<{ name: string; description: string; keywords: string; domain: string; enabled: boolean; priority: number; scanIntervalHours: number }>) => {
     await mutate(() => updateDirection(id, patch), '题材更新失败', '题材已更新，但刷新失败');
   }, [mutate]);
 

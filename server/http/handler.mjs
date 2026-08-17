@@ -323,6 +323,17 @@ export function createHandler({
       if (method === 'GET' && pathname === '/api/directions') {
         return sendJson(response, 200, { data: listDirections(db) });
       }
+      if (method === 'GET' && pathname === '/api/domains') {
+        if (!scanner || !scanner.listDomains) {
+          return sendJson(response, 200, { data: [] });
+        }
+        try {
+          const domains = await scanner.listDomains();
+          return sendJson(response, 200, { data: domains });
+        } catch {
+          return sendJson(response, 200, { data: [] });
+        }
+      }
       if (method === 'POST' && pathname === '/api/directions') {
         const body = await readJson(request);
         return sendJson(response, 201, { data: invalidBody(() => createDirection(db, body)) });

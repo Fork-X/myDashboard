@@ -299,10 +299,18 @@ export function deleteEvent(db, id) {
 
 const DIRECTION_CREATE_FIELDS = new Set([
   'name', 'description', 'keywords', 'enabled', 'priority', 'scanIntervalHours',
+  'domain',
 ]);
 const DIRECTION_PATCH_FIELDS = new Set([
   'name', 'description', 'keywords', 'enabled', 'priority', 'scanIntervalHours',
+  'domain',
 ]);
+
+function validateDomain(value) {
+  if (value === undefined || value === null) return 'stock';
+  if (typeof value !== 'string' || !value.trim()) throw new TypeError('domain must be a non-empty string');
+  return value.trim();
+}
 
 function validateDirection(input) {
   requireObject(input, 'direction input');
@@ -311,6 +319,7 @@ function validateDirection(input) {
     name: requiredText(input.name, 'direction name'),
     description: optionalText(input.description, 'direction description'),
     keywords: optionalText(input.keywords, 'direction keywords'),
+    domain: validateDomain(input.domain),
     enabled: input.enabled === undefined ? true : boolean(input.enabled, 'enabled'),
     priority: input.priority === undefined ? 0 : integer(input.priority, 'priority'),
     scanIntervalHours: input.scanIntervalHours === undefined
@@ -326,6 +335,7 @@ function validateDirectionPatch(patch) {
   if (patch.name !== undefined) result.name = requiredText(patch.name, 'direction name');
   if (patch.description !== undefined) result.description = optionalText(patch.description, 'direction description');
   if (patch.keywords !== undefined) result.keywords = optionalText(patch.keywords, 'direction keywords');
+  if (patch.domain !== undefined) result.domain = validateDomain(patch.domain);
   if (patch.enabled !== undefined) result.enabled = boolean(patch.enabled, 'enabled');
   if (patch.priority !== undefined) result.priority = integer(patch.priority, 'priority');
   if (patch.scanIntervalHours !== undefined) {
@@ -341,6 +351,7 @@ function decodeDirection(row) {
     name: row.name,
     description: row.description,
     keywords: row.keywords,
+    domain: row.domain,
     enabled: row.enabled === 1,
     priority: row.priority,
     scanIntervalHours: row.scan_interval_hours,
@@ -351,16 +362,16 @@ function decodeDirection(row) {
 
 function findDirection(db, id) {
   return decodeDirection(db.prepare(`
-    SELECT id, name, description, keywords, enabled, priority,
-           scan_interval_hours, last_scanned_at, created_at
+    SELECT id, name, description, keywords, domain,
+           enabled, priority, scan_interval_hours, last_scanned_at, created_at
     FROM directions WHERE id = ?
   `).get(id));
 }
 
 export function listDirections(db) {
   return db.prepare(`
-    SELECT id, name, description, keywords, enabled, priority,
-           scan_interval_hours, last_scanned_at, created_at
+    SELECT id, name, description, keywords, domain,
+           enabled, priority, scan_interval_hours, last_scanned_at, created_at
     FROM directions ORDER BY priority DESC, name, id
   `).all().map(decodeDirection);
 }
@@ -372,11 +383,12 @@ export function createDirection(db, input, now = new Date()) {
     const id = randomUUID();
     db.prepare(`
       INSERT INTO directions (
-        id, name, description, keywords, enabled, priority,
-        scan_interval_hours, last_scanned_at, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)
+        id, name, description, keywords, domain,
+        enabled, priority, scan_interval_hours, last_scanned_at, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
     `).run(
       id, direction.name, direction.description, direction.keywords,
+      direction.domain,
       Number(direction.enabled), direction.priority,
       direction.scanIntervalHours, createdAt,
     );
@@ -391,13 +403,14 @@ export function updateDirection(db, id, patch, now = new Date()) {
     if (!current) return null;
     db.prepare(`
       UPDATE directions
-      SET name = ?, description = ?, keywords = ?, enabled = ?,
-          priority = ?, scan_interval_hours = ?
+      SET name = ?, description = ?, keywords = ?, domain = ?,
+          enabled = ?, priority = ?, scan_interval_hours = ?
       WHERE id = ?
     `).run(
       dirPatch.name ?? current.name,
       dirPatch.description ?? current.description,
       dirPatch.keywords ?? current.keywords,
+      dirPatch.domain ?? current.domain,
       Number(dirPatch.enabled ?? current.enabled),
       dirPatch.priority ?? current.priority,
       dirPatch.scanIntervalHours ?? current.scanIntervalHours,
@@ -455,6 +468,7 @@ function decodeInboxItem(row) {
   return {
     id: row.id,
     directionId: row.direction_id,
+    domain: row.domain,
     sourceSummary: row.source_summary,
     sourceUrl: row.source_url,
     aiEventName: row.ai_event_name,
@@ -472,7 +486,7 @@ function decodeInboxItem(row) {
 
 function findInboxItem(db, id) {
   return decodeInboxItem(db.prepare(`
-    SELECT id, direction_id, source_summary, source_url, ai_event_name,
+    SELECT id, direction_id, domain, source_summary, source_url, ai_event_name,
            ai_event_start_date, ai_event_end_date, date_confidence,
            ai_tags_json, ai_tickers_json, status, converted_event_id,
            scanned_at, created_at
@@ -482,7 +496,7 @@ function findInboxItem(db, id) {
 
 export function listInboxItems(db) {
   return db.prepare(`
-    SELECT id, direction_id, source_summary, source_url, ai_event_name,
+    SELECT id, direction_id, domain, source_summary, source_url, ai_event_name,
            ai_event_start_date, ai_event_end_date, date_confidence,
            ai_tags_json, ai_tickers_json, status, converted_event_id,
            scanned_at, created_at
@@ -498,13 +512,14 @@ export function createInboxItem(db, input, now = new Date()) {
     const id = randomUUID();
     db.prepare(`
       INSERT INTO inbox_items (
-        id, direction_id, source_summary, source_url, ai_event_name,
+        id, direction_id, domain, source_summary, source_url, ai_event_name,
         ai_event_start_date, ai_event_end_date, date_confidence,
         ai_tags_json, ai_tickers_json, status, scanned_at, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
     `).run(
       id,
       input.directionId ?? null,
+      input.domain ?? null,
       requiredText(input.sourceSummary, 'source summary'),
       optionalText(input.sourceUrl, 'source URL'),
       optionalText(input.aiEventName, 'AI event name'),

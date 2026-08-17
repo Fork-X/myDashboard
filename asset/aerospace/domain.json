@@ -1,0 +1,6 @@
+{
+  "name": "航天",
+  "key": "aerospace",
+  "scanIntervalHours": 6,
+  "ambushDays": 60
+}

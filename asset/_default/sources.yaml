@@ -1,0 +1,17 @@
+# 通用信源（所有板块自动继承，板块 sources.yaml 里的源会与这里合并）
+#
+# type: rss      原生 RSS/Atom，直连网站，无第三方代理
+# maxItems: 10   最多取多少条进 prompt，调小可直接降低 token 消耗
+#
+# 增删信源后需重启服务生效。改完建议跑 npm run scan:dry 确认能抓到内容。
+
+sources:
+  - name: "东方财富-要闻"
+    type: rss
+    url: "http://rss.eastmoney.com/rss_partener.xml"
+    maxItems: 10
+
+  - name: "华尔街见闻"
+    type: rss
+    url: "https://dedicated.wallstreetcn.com/rss.xml"
+    maxItems: 10

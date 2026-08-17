@@ -199,6 +199,7 @@ test('creates and manages directions', async () => {
       name: '商业航天',
       description: '关注中国商业航天发射计划',
       keywords: '火箭,发射,卫星,航天',
+      domain: 'stock',
       enabled: true,
       priority: 10,
       scanIntervalHours: 12,
@@ -245,6 +246,7 @@ test('creates and lists inbox items', async () => {
     assert.deepEqual(item, {
       id: item.id,
       directionId: null,
+      domain: null,
       sourceSummary: '朱雀三号预计9月中旬首飞',
       sourceUrl: 'https://example.com/news',
       aiEventName: '朱雀三号首飞',

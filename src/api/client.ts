@@ -4,6 +4,7 @@ import type {
   ConversationSummary,
   DirectionItem,
   DistillDraft,
+  DomainInfo,
   EventItem,
   GoalItem,
   GoalProgressItem,
@@ -264,6 +265,13 @@ export function deleteTicker(id: string): Promise<TickerItem> {
 
 // ── investment: directions ──────────────────────────────────────────────────
 
+export function listDomains(): Promise<DomainInfo[]> {
+  return request<unknown>('/api/domains').then((value) => {
+    if (!Array.isArray(value)) invalidData();
+    return value.map(parseDomainInfo);
+  });
+}
+
 export function listDirections(): Promise<DirectionItem[]> {
   return request<unknown>('/api/directions').then(parseDirectionList);
 }
@@ -272,6 +280,7 @@ export function createDirection(input: {
   name: string;
   description?: string;
   keywords?: string;
+  domain?: string;
   enabled?: boolean;
   priority?: number;
   scanIntervalHours?: number;
@@ -288,6 +297,7 @@ export function updateDirection(
     name: string;
     description: string;
     keywords: string;
+    domain: string;
     enabled: boolean;
     priority: number;
     scanIntervalHours: number;
@@ -644,6 +654,22 @@ function parseDirectionList(value: unknown): DirectionItem[] {
   return value.map(parseDirection);
 }
 
+function parseDomainInfo(value: unknown): DomainInfo {
+  if (
+    !isObject(value)
+    || typeof value.key !== 'string'
+    || typeof value.name !== 'string'
+    || typeof value.ambushDays !== 'number'
+  ) {
+    invalidData();
+  }
+  return {
+    key: value.key,
+    name: value.name,
+    ambushDays: value.ambushDays,
+  };
+}
+
 function parseDirection(value: unknown): DirectionItem {
   if (
     !isObject(value)
@@ -651,6 +677,7 @@ function parseDirection(value: unknown): DirectionItem {
     || typeof value.name !== 'string'
     || typeof value.description !== 'string'
     || typeof value.keywords !== 'string'
+    || typeof value.domain !== 'string'
     || typeof value.enabled !== 'boolean'
     || typeof value.priority !== 'number'
     || typeof value.scanIntervalHours !== 'number'
@@ -664,6 +691,7 @@ function parseDirection(value: unknown): DirectionItem {
     name: value.name,
     description: value.description,
     keywords: value.keywords,
+    domain: value.domain,
     enabled: value.enabled,
     priority: value.priority,
     scanIntervalHours: value.scanIntervalHours,

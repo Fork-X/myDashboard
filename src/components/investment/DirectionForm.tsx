@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { listDomains } from '../../api/client';
+import type { DomainInfo } from '../../api/types';
 
 interface Props {
   initial?: {
     name: string;
     description: string;
     keywords: string;
+    domain: string;
     enabled: boolean;
     priority: number;
     scanIntervalHours: number;
   };
   onSave: (input: {
-    name: string; description: string; keywords: string; enabled: boolean; priority: number; scanIntervalHours: number;
+    name: string; description: string; keywords: string; domain: string; enabled: boolean; priority: number; scanIntervalHours: number;
   }) => Promise<void>;
   onCancel: () => void;
   saving: boolean;
@@ -20,14 +23,32 @@ export default function DirectionForm({ initial, onSave, onCancel, saving }: Pro
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [keywords, setKeywords] = useState(initial?.keywords ?? '');
+  const [domain, setDomain] = useState(initial?.domain ?? '');
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
   const [priority, setPriority] = useState(initial?.priority ?? 0);
   const [scanIntervalHours, setScanIntervalHours] = useState(initial?.scanIntervalHours ?? 6);
+  const [domains, setDomains] = useState<DomainInfo[]>([]);
+
+  useEffect(() => {
+    listDomains().then((list) => {
+      setDomains(list);
+      // 新建题材默认选第一个真实板块（不再提供“默认”伪板块）
+      setDomain((current) => current || list[0]?.key || '');
+    }).catch(() => setDomains([]));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
-    await onSave({ name: name.trim(), description: description.trim(), keywords: keywords.trim(), enabled, priority, scanIntervalHours });
+    if (!name.trim() || !domain) return;
+    await onSave({
+      name: name.trim(),
+      description: description.trim(),
+      keywords: keywords.trim(),
+      domain,
+      enabled,
+      priority,
+      scanIntervalHours,
+    });
   }
 
   return (
@@ -47,6 +68,19 @@ export default function DirectionForm({ initial, onSave, onCancel, saving }: Pro
         <label className="block text-sm font-medium text-vintage-dark mb-1">关键词（逗号分隔）</label>
         <input type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)}
           placeholder="如：火箭,发射,卫星,航天" className="vintage-input w-full" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-vintage-dark mb-1">所属板块</label>
+        <select value={domain} onChange={(e) => setDomain(e.target.value)}
+          className="vintage-input w-full">
+          {/* 编辑存量题材时，旧值（如遗留的 stock）不在板块列表里也原样展示，不静默改判 */}
+          {domain && !domains.some((d) => d.key === domain) && (
+            <option value={domain}>{domain === 'stock' ? '通用（待分配板块）' : domain}</option>
+          )}
+          {domains.map((d) => (
+            <option key={d.key} value={d.key}>{d.name}</option>
+          ))}
+        </select>
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div>
